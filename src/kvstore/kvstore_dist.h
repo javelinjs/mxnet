@@ -27,7 +27,7 @@ namespace kvstore {
  */
 class KVStoreDist : public KVStoreLocal {
  public:
-  KVStoreDist() : ps_worker_(nullptr), server_(nullptr) {
+  KVStoreDist() : ps_worker_(nullptr), server_(nullptr), ps_scheduler_(nullptr) {
     if (IsWorkerNode()) {
       ps_worker_ = new ps::KVWorker<real_t>(0);
       ps::Start("mxnet\0");
@@ -169,12 +169,21 @@ class KVStoreDist : public KVStoreLocal {
     if (IsServerNode()) {
       server_ = new KVStoreDistServer();
       server_->set_controller(controller);
+    } else if (IsSchedulerNode()) {
+      ps_scheduler_ = new ps::SimpleApp(0);
+      //new std::thread(&KVStoreDist::CheckHeartBeat, this);
     }
 
     ps::Start("mxnet_server\0");
     if (server_) server_->Run();
+    std::cout << "Finalizing ..." << std::endl;
     ps::Finalize();
+    std::cout << "[MXNET] Finalized ..." << std::endl;
     delete server_; server_ = nullptr;
+    if (ps_scheduler_) {
+      delete ps_scheduler_; ps_scheduler_ = nullptr;
+    }
+    std::cout << "[MXNET] RunServer finished ..." << std::endl;
   }
 
  private:
@@ -203,6 +212,17 @@ class KVStoreDist : public KVStoreLocal {
     auto last = std::unique(keys_copy.begin(), keys_copy.end());
     CHECK_EQ(static_cast<size_t>(std::distance(keys_copy.begin(), last)),
              static_cast<size_t>(keys.size()));
+  }
+
+  /**
+   * \brief check if any instance goes out
+   */
+  void CheckHeartBeat() {
+    std::cout << "check heart beat" << std::endl;
+    std::this_thread::sleep_for(std::chrono::seconds(20));
+    std::cout << "let's kill servers" << std::endl;
+    ps_scheduler_->Wait(ps_scheduler_->Request(kStopServer, "", ps::kServerGroup));
+    std::cout << "finish check heart beat" << std::endl;
   }
 
   /**
@@ -276,6 +296,11 @@ class KVStoreDist : public KVStoreLocal {
    * \brief the server handle
    */
   KVStoreDistServer* server_;
+
+  /**
+   * \brief the scheduler handle
+   */
+  ps::SimpleApp* ps_scheduler_;
 };
 
 }  // namespace kvstore
