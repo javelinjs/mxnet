@@ -171,8 +171,8 @@ class KVStoreDist : public KVStoreLocal {
       server_->set_controller(controller);
     } else if (IsSchedulerNode()) {
       ps_scheduler_ = new ps::SimpleApp(0);
-      //new std::thread(&KVStoreDist::CheckHeartBeat, this);
     }
+    new std::thread(&KVStoreDist::CheckHeartBeat, this);
 
     ps::Start("mxnet_server\0");
     if (server_) server_->Run();
@@ -218,11 +218,24 @@ class KVStoreDist : public KVStoreLocal {
    * \brief check if any instance goes out
    */
   void CheckHeartBeat() {
-    std::cout << "check heart beat" << std::endl;
-    std::this_thread::sleep_for(std::chrono::seconds(20));
-    std::cout << "let's kill servers" << std::endl;
-    ps_scheduler_->Wait(ps_scheduler_->Request(kStopServer, "", ps::kServerGroup));
-    std::cout << "finish check heart beat" << std::endl;
+    while (true) {
+      std::cout << "check heart beat" << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(2));
+      auto dead_nodes = ps::Postoffice::Get()->GetDeadNodes(10);
+      for (int r : dead_nodes) {
+        std::cout << "Node " << r << " is dead" << std::endl;
+        if (r == ps::kScheduler) {
+          if (server_) {
+            std::cout << "Stop myself ...";
+            server_->Stop();
+            ps::Postoffice::Get()->ForceReleaseBarrier();
+          }
+        }
+      }
+    }
+    //std::cout << "let's kill servers" << std::endl;
+    //ps_scheduler_->Wait(ps_scheduler_->Request(kStopServer, "", ps::kServerGroup));
+    //std::cout << "finish check heart beat" << std::endl;
   }
 
   /**

@@ -56,6 +56,7 @@ class Executor {
    * \brief let the thread called \ref Start to exec a function. threadsafe
    */
   void Exec(const Func& func) {
+    if (stopped_) return;
     Block blk(func);
     auto fut = blk.p->get_future();
     {
@@ -70,7 +71,17 @@ class Executor {
    * \brief stop the thread, threadsafe
    */
   void Stop() {
-    Exec(Func());
+    //Exec(Func());
+    stopped_ = true;
+    const Func& func = Func();
+    Block blk(func);
+    auto fut = blk.p->get_future();
+    {
+      std::lock_guard<std::mutex> lk(mu_);
+      queue_.push(std::move(blk));
+      cond_.notify_one();
+    }
+    fut.wait();
   }
 
  private:
@@ -82,6 +93,7 @@ class Executor {
   std::queue<Block> queue_;
   std::mutex mu_;
   std::condition_variable cond_;
+  std::atomic<bool> stopped_{false};
 };
 
 class KVStoreDistServer {
@@ -115,6 +127,10 @@ class KVStoreDistServer {
    */
   void Run() {
     exec_.Start();
+  }
+
+  void Stop() {
+    exec_.Stop();
   }
 
  private:
