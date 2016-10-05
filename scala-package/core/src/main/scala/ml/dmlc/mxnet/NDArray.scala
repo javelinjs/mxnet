@@ -508,13 +508,47 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
 
   /**
    * Return a sliced NDArray at the ith position of axis0
-   * NDArray only support continuous slicing on axis 0
    * @param i
    * @return a sliced NDArray that shares memory with current one.
    */
   def slice(i: Int): NDArray = {
     slice(i, i + 1)
   }
+
+  /**
+   * Return a sub NDArray that shares memory with current one.
+   * the first axis will be rolled up, which causes its shape different from slice(i, i+1)
+   * @param idx index of sub array.
+   */
+  def at(idx: Int): NDArray = {
+    val handleRef = new NDArrayHandleRef()
+    checkCall(_LIB.mxNDArrayAt(this.handle, idx, handleRef))
+    new NDArray(handle = handleRef.value, writable = this.writable)
+  }
+
+  // Get transpose of current NDArray
+  def T: NDArray = {
+    require(this.shape.size == 2, "Only 2D matrix is allowed to be transposed")
+    NDArray.genericNDArrayFunctionInvoke("transpose", Seq(this))
+  }
+
+  /**
+   * Get data type of current NDArray.
+   * @return class representing type of current ndarray
+   */
+  def dtype: Class[_ >: Float with Int with Double] = {
+    val mxDtype = new RefInt
+    checkCall(_LIB.mxNDArrayGetDType(handle, mxDtype))
+    NDArray.DTYPE_MX_TO_NATIVE(mxDtype.value)
+  }
+
+  /**
+   * TODO
+   * Return a copied numpy array of current array with specified type.
+   * @param dtype Desired type of result array.
+   * @return A copy of array content.
+   */
+  // def asType(dtype: Class[_ >: Float with Int with Double]): NDArray = {
 
   /**
    * Return a reshaped NDArray that shares memory with current one.
@@ -724,6 +758,20 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * @return the copied NDArray in the same context
    */
   def copy(): NDArray = copyTo(this.context)
+
+  /**
+   * Return an `NDArray` that lives in the target context. If the array
+   * is already in that context, the same object is returned. Otherwise, a copy is made.
+   * @param context The target context we want the return value to live in.
+   * @return A copy or `self` as an `NDArray` that lives in the target context.
+   */
+  def asInContext(context: Context): NDArray = {
+    if (this.context == context) {
+      this
+    } else {
+      this.copyTo(context)
+    }
+  }
 
   /**
    * Get shape of current NDArray.
