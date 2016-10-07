@@ -1,6 +1,7 @@
 package ml.dmlc.mxnet
 
 import ml.dmlc.mxnet.Base._
+import ml.dmlc.mxnet.DType.DType
 import org.slf4j.LoggerFactory
 
 import scala.collection.mutable
@@ -15,20 +16,6 @@ import scala.ref.WeakReference
 object NDArray {
   implicit def getFirstResult(ret: NDArrayFuncReturn): NDArray = ret(0)
   private val logger = LoggerFactory.getLogger(classOf[NDArray])
-
-  private[mxnet] val DTYPE_NATIVE_TO_MX: Map[Class[_ >: Float with Int with Double], Int] = Map(
-    classOf[Float] -> 0,
-    classOf[Double] -> 1,
-    classOf[Int] -> 4
-  )
-
-  private[mxnet] val DTYPE_MX_TO_NATIVE: Map[Int, Class[_ >: Float with Int with Double]] = Map(
-    0 -> classOf[Float],
-    1 -> classOf[Double],
-    2 -> classOf[Float],
-    3 -> classOf[Int],
-    4 -> classOf[Int]
-  )
 
   private val functions: Map[String, NDArrayFunction] = initNDArrayModule()
 
@@ -536,10 +523,10 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    * Get data type of current NDArray.
    * @return class representing type of current ndarray
    */
-  def dtype: Class[_ >: Float with Int with Double] = {
+  def dtype: DType = {
     val mxDtype = new RefInt
     checkCall(_LIB.mxNDArrayGetDType(handle, mxDtype))
-    NDArray.DTYPE_MX_TO_NATIVE(mxDtype.value)
+    DType(mxDtype.value)
   }
 
   /**
