@@ -126,7 +126,6 @@ inline bool NormalizeShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
 }
 
-
 static void Normalize(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,
                       const std::vector<TBlob> &inputs,
@@ -189,6 +188,63 @@ static void Flip(const nnvm::NodeAttrs &attrs,
              ishape[1-axis], ishape[2] * (axis == 0 ? 1 : ishape[1]));
   });
 }
+
+struct CropParam : public dmlc::Parameter<CropParam> {
+  int i, j, h, w;
+  DMLC_DECLARE_PARAMETER(CropParam) {
+    DMLC_DECLARE_FIELD(i)
+    .describe("Upper pixel coordinate.");
+    DMLC_DECLARE_FIELD(j)
+    .describe("Left pixel coordinate.");
+    DMLC_DECLARE_FIELD(h)
+    .describe("Height of the cropped image.");
+    DMLC_DECLARE_FIELD(w)
+    .describe("Width of the cropped image.");
+  }
+};
+
+inline bool CropShape(const nnvm::NodeAttrs& attrs,
+                      std::vector<TShape> *in_attrs,
+                      std::vector<TShape> *out_attrs) {
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+  const auto& dshape = (*in_attrs)[0];
+  if (!dshape.ndim()) return false;
+  CHECK_EQ(dshape.ndim(), 3)
+    << "Input must have 3 dimensions";
+
+  auto nchannels = dshape[0];
+  CHECK(param.mean.ndim() == 1 || param.mean.ndim() == nchannels)
+    << "mean must have either 1 or " << nchannels << " elements";
+  CHECK(param.std.ndim() == 1 || param.std.ndim() == nchannels)
+    << "std must have either 1 or " << nchannels << " elements";
+
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
+}
+
+static void Crop(const nnvm::NodeAttrs &attrs,
+                  const OpContext &ctx,
+                  const std::vector<TBlob> &inputs,
+                  const std::vector<OpReqType> &req,
+                  const std::vector<TBlob> &outputs) {
+  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+
+  int nchannels = inputs[0].shape_[0];
+  int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    DType *input = inputs[0].dptr<DType>();
+    DType *output = outputs[0].dptr<DType>();
+
+    for (int i = 0; i < nchannels; ++i) {
+      DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
+      DType std = param.std[param.std.ndim() > 1 ? i : 0];
+      for (int j = 0; j < length; ++j) {
+        output[i * length + j] = (input[i * length + j] - mean) / std;
+      }
+    }
+  });
+}
+
 
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
   float max_brightness;
