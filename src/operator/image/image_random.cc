@@ -86,6 +86,32 @@ NNVM_REGISTER_OP(_image_flip_up_down)
 .set_attr<FCompute>("FCompute<cpu>", Flip<1>)
 .add_argument("data", "NDArray-or-Symbol", "The input.");
 
+DMLC_REGISTER_PARAMETER(ImageCropParam);
+NNVM_REGISTER_OP(_image_crop)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ImageCropParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageCropShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", ImageCrop)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.add_argument("data", "NDArray-or-Symbol", "The input.")
+.add_arguments(ImageCropParam::__FIELDS__());
+
+DMLC_REGISTER_PARAMETER(ImageResizeParam);
+NNVM_REGISTER_OP(_image_resize)
+.describe(R"code()code" ADD_FILELINE)
+.set_num_inputs(1)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<ImageResizeParam>)
+.set_attr<nnvm::FInferShape>("FInferShape", ImageResizeShape)
+.set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
+.set_attr<FCompute>("FCompute<cpu>", ImageResize)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
+.add_argument("data", "NDArray-or-Symbol", "The input.")
+.add_arguments(ImageResizeParam::__FIELDS__());
+
 DMLC_REGISTER_PARAMETER(RandomBrightnessParam);
 NNVM_REGISTER_OP(_image_random_brightness)
 .describe(R"code()code" ADD_FILELINE)

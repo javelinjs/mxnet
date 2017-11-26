@@ -189,12 +189,12 @@ static void Flip(const nnvm::NodeAttrs &attrs,
   });
 }
 
-struct CropParam : public dmlc::Parameter<CropParam> {
-  int i, j, h, w;
-  DMLC_DECLARE_PARAMETER(CropParam) {
-    DMLC_DECLARE_FIELD(i)
+struct ImageCropParam : public dmlc::Parameter<ImageCropParam> {
+  int y, x, h, w;
+  DMLC_DECLARE_PARAMETER(ImageCropParam) {
+    DMLC_DECLARE_FIELD(y)
     .describe("Upper pixel coordinate.");
-    DMLC_DECLARE_FIELD(j)
+    DMLC_DECLARE_FIELD(x)
     .describe("Left pixel coordinate.");
     DMLC_DECLARE_FIELD(h)
     .describe("Height of the cropped image.");
@@ -203,48 +203,203 @@ struct CropParam : public dmlc::Parameter<CropParam> {
   }
 };
 
-inline bool CropShape(const nnvm::NodeAttrs& attrs,
-                      std::vector<TShape> *in_attrs,
-                      std::vector<TShape> *out_attrs) {
-  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
-  const auto& dshape = (*in_attrs)[0];
-  if (!dshape.ndim()) return false;
-  CHECK_EQ(dshape.ndim(), 3)
-    << "Input must have 3 dimensions";
+inline bool ImageCropShape(const nnvm::NodeAttrs& attrs,
+                            std::vector<TShape> *in_attrs,
+                            std::vector<TShape> *out_attrs) {
+  const ImageCropParam &param = nnvm::get<ImageCropParam>(attrs.parsed);
+  const auto &ishape = (*in_attrs)[0];
+  if (!ishape.ndim()) return false;
 
-  auto nchannels = dshape[0];
-  CHECK(param.mean.ndim() == 1 || param.mean.ndim() == nchannels)
-    << "mean must have either 1 or " << nchannels << " elements";
-  CHECK(param.std.ndim() == 1 || param.std.ndim() == nchannels)
-    << "std must have either 1 or " << nchannels << " elements";
+  CHECK_EQ(ishape.ndim(), 3) << "Input must have 3 dimensions.";
+  CHECK(param.y >= 0 && param.y < ishape[0])
+    << "Invalid upper pixel coordinate " << param.y;
+  CHECK(param.x >= 0 && param.x < ishape[1])
+    << "Invalid left pixel coordinate " << param.x;
+  CHECK(param.h > 0 && param.h + param.y <= ishape[0])
+    << "Invalid cropped height " << param.h;
+  CHECK(param.w > 0 && param.w + param.x <= ishape[1])
+    << "Invalid cropped width " << param.w;
 
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, dshape);
+  TShape oshape({param.h, param.w, ishape[2]});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return oshape.Size() != 0;
 }
 
-static void Crop(const nnvm::NodeAttrs &attrs,
-                  const OpContext &ctx,
-                  const std::vector<TBlob> &inputs,
-                  const std::vector<OpReqType> &req,
-                  const std::vector<TBlob> &outputs) {
-  const NormalizeParam &param = nnvm::get<NormalizeParam>(attrs.parsed);
+static void ImageCrop(const nnvm::NodeAttrs &attrs,
+                      const OpContext &ctx,
+                      const std::vector<TBlob> &inputs,
+                      const std::vector<OpReqType> &req,
+                      const std::vector<TBlob> &outputs) {
+  CheckIsImage(inputs[0]);
+  const ImageCropParam &param = nnvm::get<ImageCropParam>(attrs.parsed);
 
-  int nchannels = inputs[0].shape_[0];
-  int length = inputs[0].shape_[1] * inputs[0].shape_[2];
+  const int nchannels = inputs[0].shape_[2];
+  const int length_src = inputs[0].shape_[1] * inputs[0].shape_[2];
+  const int length_dst = param.w * nchannels;
 
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     DType *input = inputs[0].dptr<DType>();
     DType *output = outputs[0].dptr<DType>();
 
-    for (int i = 0; i < nchannels; ++i) {
-      DType mean = param.mean[param.mean.ndim() > 1 ? i : 0];
-      DType std = param.std[param.std.ndim() > 1 ? i : 0];
-      for (int j = 0; j < length; ++j) {
-        output[i * length + j] = (input[i * length + j] - mean) / std;
+    for (int y = param.y; y < param.y + param.h; ++y) {
+      const int j = y - param.y;
+      for (int x = param.x; x < param.x + param.w; ++x) {
+        const int i = x - param.x;
+        for (int c = 0; c < nchannels; ++c) {
+          output[j * length_dst + i * nchannels + c]
+            = input[y * length_src + x * nchannels + c];
+        }
       }
     }
   });
 }
 
+struct ImageResizeParam : public dmlc::Parameter<ImageResizeParam> {
+  int height, width;
+  DMLC_DECLARE_PARAMETER(ImageResizeParam) {
+    DMLC_DECLARE_FIELD(height)
+    .describe("Height of the resized image.");
+    DMLC_DECLARE_FIELD(width)
+    .describe("Width of the resized image.");
+  }
+};
+
+inline bool ImageResizeShape(const nnvm::NodeAttrs& attrs,
+                             std::vector<TShape> *in_attrs,
+                             std::vector<TShape> *out_attrs) {
+  const ImageResizeParam &param = nnvm::get<ImageResizeParam>(attrs.parsed);
+  const auto &ishape = (*in_attrs)[0];
+  if (!ishape.ndim()) return false;
+
+  CHECK_EQ(ishape.ndim(), 3) << "Input must have 3 dimensions.";
+  CHECK_GT(param.height, 0) << "Invalid resize height " << param.height;
+  CHECK_GT(param.width, 0) << "Invalid resize width " << param.width;
+
+  TShape oshape({param.height, param.width, ishape[2]});
+  SHAPE_ASSIGN_CHECK(*out_attrs, 0, oshape);
+  return oshape.Size() != 0;
+}
+
+struct CachedInterpolation {
+  int lower;  // Lower source index used in the interpolation
+  int upper;  // Upper source index used in the interpolation
+  // 1-D linear iterpolation scale (see:
+  // https://en.wikipedia.org/wiki/Bilinear_interpolation)
+  float lerp;
+};
+
+inline void compute_interpolation_weights(const int out_size,
+                                          const int in_size,
+                                          const float scale,
+                                          CachedInterpolation* interpolation) {
+  interpolation[out_size].lower = 0;
+  interpolation[out_size].upper = 0;
+  for (int i = out_size - 1; i >= 0; --i) {
+    const float in = i * scale;
+    interpolation[i].lower = static_cast<int>(in);
+    interpolation[i].upper = std::min(interpolation[i].lower + 1, in_size - 1);
+    interpolation[i].lerp = in - interpolation[i].lower;
+  }
+}
+
+/**
+ * Computes the bilinear interpolation from the appropriate 4 float points
+ * and the linear interpolation weights.
+ */
+inline float compute_lerp(const float top_left, const float top_right,
+                          const float bottom_left, const float bottom_right,
+                          const float x_lerp, const float y_lerp) {
+  const float top = top_left + (top_right - top_left) * x_lerp;
+  const float bottom = bottom_left + (bottom_right - bottom_left) * x_lerp;
+  return top + (bottom - top) * y_lerp;
+}
+
+static void ImageResize(const nnvm::NodeAttrs &attrs,
+                        const OpContext &ctx,
+                        const std::vector<TBlob> &inputs,
+                        const std::vector<OpReqType> &req,
+                        const std::vector<TBlob> &outputs) {
+  CheckIsImage(inputs[0]);
+
+  const int iheight = inputs[0].shape_[0];
+  const int iwidth = inputs[0].shape_[1];
+  const int nchannel = inputs[0].shape_[2];
+
+  const int oheight = outputs[0].shape_[0];
+  const int owidth = outputs[0].shape_[1];
+
+  const float height_scale = iheight / static_cast<float>(oheight);
+  const float width_scale = iwidth / static_cast<float>(owidth);
+
+  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    if (oheight == iheight && owidth == iwidth) {
+      std::memcpy(outputs[0].dptr_, inputs[0].dptr_, iheight * iwidth * nchannel * sizeof(DType));
+      return;
+    }
+
+    std::vector<CachedInterpolation> ys(oheight + 1);
+    std::vector<CachedInterpolation> xs(owidth + 1);
+
+    // Compute the cached interpolation weights on the x and y dimensions.
+    compute_interpolation_weights(oheight, iheight, height_scale, ys.data());
+    compute_interpolation_weights(owidth, iwidth, width_scale, xs.data());
+
+    // Scale x interpolation weights to avoid a multiplication during iteration.
+    for (int i = 0; i < xs.size(); ++i) {
+      xs[i].lower *= nchannel;
+      xs[i].upper *= nchannel;
+    }
+
+    DType *input = inputs[0].dptr<DType>();
+    DType *output = outputs[0].dptr<DType>();
+
+    const int in_row_size = iwidth * nchannel;
+    const int in_batch_num_values = iheight * in_row_size;
+    const int out_row_size = owidth * nchannel;
+
+    for (int y = 0; y < oheight; ++y) {
+      const DType *ys_input_lower_ptr = input + ys[y].lower * in_row_size;
+      const DType *ys_input_upper_ptr = input + ys[y].upper * in_row_size;
+      const float ys_lerp = ys[y].lerp;
+
+      for (int x = 0; x < owidth; ++x) {
+        const int xs_lower = xs[x].lower;
+        const int xs_upper = xs[x].upper;
+        const float xs_lerp = xs[x].lerp;
+
+        // Read channel 0.
+        const float top_left0(ys_input_lower_ptr[xs_lower + 0]);
+        const float top_right0(ys_input_lower_ptr[xs_upper + 0]);
+        const float bottom_left0(ys_input_upper_ptr[xs_lower + 0]);
+        const float bottom_right0(ys_input_upper_ptr[xs_upper + 0]);
+
+        // Read channel 1.
+        const float top_left1(ys_input_lower_ptr[xs_lower + 1]);
+        const float top_right1(ys_input_lower_ptr[xs_upper + 1]);
+        const float bottom_left1(ys_input_upper_ptr[xs_lower + 1]);
+        const float bottom_right1(ys_input_upper_ptr[xs_upper + 1]);
+
+        // Read channel 2.
+        const float top_left2(ys_input_lower_ptr[xs_lower + 2]);
+        const float top_right2(ys_input_lower_ptr[xs_upper + 2]);
+        const float bottom_left2(ys_input_upper_ptr[xs_lower + 2]);
+        const float bottom_right2(ys_input_upper_ptr[xs_upper + 2]);
+
+        // Compute output.
+        output[x * nchannel + 0] =
+          compute_lerp(top_left0, top_right0, bottom_left0, bottom_right0, xs_lerp, ys_lerp);
+
+        output[x * nchannel + 1] =
+          compute_lerp(top_left1, top_right1, bottom_left1, bottom_right1, xs_lerp, ys_lerp);
+
+        output[x * nchannel + 2] =
+          compute_lerp(top_left2, top_right2, bottom_left2, bottom_right2, xs_lerp, ys_lerp);
+      }
+
+      output += out_row_size;
+    }
+  });
+}
 
 struct RandomBrightnessParam : public dmlc::Parameter<RandomBrightnessParam> {
   float max_brightness;
