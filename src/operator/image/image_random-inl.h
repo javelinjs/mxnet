@@ -31,6 +31,7 @@
 #include <utility>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "resize_bicubic-inl.h"
 
 namespace mxnet {
 namespace op {
@@ -255,12 +256,21 @@ static void ImageCrop(const nnvm::NodeAttrs &attrs,
 }
 
 struct ImageResizeParam : public dmlc::Parameter<ImageResizeParam> {
-  int height, width;
+  int height, width, interpolation;
   DMLC_DECLARE_PARAMETER(ImageResizeParam) {
     DMLC_DECLARE_FIELD(height)
     .describe("Height of the resized image.");
     DMLC_DECLARE_FIELD(width)
     .describe("Width of the resized image.");
+    // TODO: describe
+    DMLC_DECLARE_FIELD(interpolation)
+    .describe("An optional resampling filter."
+              "This can be one of PIL.Image.NEAREST (use nearest neighbour),"
+              "PIL.Image.BILINEAR (linear interpolation),"
+              "PIL.Image.BICUBIC (cubic spline interpolation),"
+              "or PIL.Image.LANCZOS (a high-quality downsampling filter)."
+              "If omitted, it is set PIL.Image.BILINEAR.")
+    .set_default(2);
   }
 };
 
@@ -314,12 +324,80 @@ inline float compute_lerp(const float top_left, const float top_right,
   return top + (bottom - top) * y_lerp;
 }
 
+template<typename DType>
+static void resize_bilinear(DType *output, const DType *input,
+                            const int oheight, const int owidth,
+                            const int iheight, const int iwidth, const int nchannel) {
+  const float height_scale = iheight / static_cast<float>(oheight);
+  const float width_scale = iwidth / static_cast<float>(owidth);
+
+  std::vector<CachedInterpolation> ys(oheight + 1);
+  std::vector<CachedInterpolation> xs(owidth + 1);
+
+  // Compute the cached interpolation weights on the x and y dimensions.
+  compute_interpolation_weights(oheight, iheight, height_scale, ys.data());
+  compute_interpolation_weights(owidth, iwidth, width_scale, xs.data());
+
+  // Scale x interpolation weights to avoid a multiplication during iteration.
+  for (int i = 0; i < xs.size(); ++i) {
+    xs[i].lower *= nchannel;
+    xs[i].upper *= nchannel;
+  }
+
+  const int in_row_size = iwidth * nchannel;
+  const int in_batch_num_values = iheight * in_row_size;
+  const int out_row_size = owidth * nchannel;
+
+  for (int y = 0; y < oheight; ++y) {
+    const DType *ys_input_lower_ptr = input + ys[y].lower * in_row_size;
+    const DType *ys_input_upper_ptr = input + ys[y].upper * in_row_size;
+    const float ys_lerp = ys[y].lerp;
+
+    for (int x = 0; x < owidth; ++x) {
+      const int xs_lower = xs[x].lower;
+      const int xs_upper = xs[x].upper;
+      const float xs_lerp = xs[x].lerp;
+
+      // Read channel 0.
+      const float top_left0(ys_input_lower_ptr[xs_lower + 0]);
+      const float top_right0(ys_input_lower_ptr[xs_upper + 0]);
+      const float bottom_left0(ys_input_upper_ptr[xs_lower + 0]);
+      const float bottom_right0(ys_input_upper_ptr[xs_upper + 0]);
+
+      // Read channel 1.
+      const float top_left1(ys_input_lower_ptr[xs_lower + 1]);
+      const float top_right1(ys_input_lower_ptr[xs_upper + 1]);
+      const float bottom_left1(ys_input_upper_ptr[xs_lower + 1]);
+      const float bottom_right1(ys_input_upper_ptr[xs_upper + 1]);
+
+      // Read channel 2.
+      const float top_left2(ys_input_lower_ptr[xs_lower + 2]);
+      const float top_right2(ys_input_lower_ptr[xs_upper + 2]);
+      const float bottom_left2(ys_input_upper_ptr[xs_lower + 2]);
+      const float bottom_right2(ys_input_upper_ptr[xs_upper + 2]);
+
+      // Compute output.
+      output[x * nchannel + 0] =
+      compute_lerp(top_left0, top_right0, bottom_left0, bottom_right0, xs_lerp, ys_lerp);
+
+      output[x * nchannel + 1] =
+      compute_lerp(top_left1, top_right1, bottom_left1, bottom_right1, xs_lerp, ys_lerp);
+
+      output[x * nchannel + 2] =
+      compute_lerp(top_left2, top_right2, bottom_left2, bottom_right2, xs_lerp, ys_lerp);
+    }
+
+    output += out_row_size;
+  }
+}
+
 static void ImageResize(const nnvm::NodeAttrs &attrs,
                         const OpContext &ctx,
                         const std::vector<TBlob> &inputs,
                         const std::vector<OpReqType> &req,
                         const std::vector<TBlob> &outputs) {
   CheckIsImage(inputs[0]);
+  const ImageResizeParam &param = nnvm::get<ImageResizeParam>(attrs.parsed);
 
   const int iheight = inputs[0].shape_[0];
   const int iwidth = inputs[0].shape_[1];
@@ -328,75 +406,19 @@ static void ImageResize(const nnvm::NodeAttrs &attrs,
   const int oheight = outputs[0].shape_[0];
   const int owidth = outputs[0].shape_[1];
 
-  const float height_scale = iheight / static_cast<float>(oheight);
-  const float width_scale = iwidth / static_cast<float>(owidth);
-
   MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     if (oheight == iheight && owidth == iwidth) {
       std::memcpy(outputs[0].dptr_, inputs[0].dptr_, iheight * iwidth * nchannel * sizeof(DType));
       return;
     }
 
-    std::vector<CachedInterpolation> ys(oheight + 1);
-    std::vector<CachedInterpolation> xs(owidth + 1);
-
-    // Compute the cached interpolation weights on the x and y dimensions.
-    compute_interpolation_weights(oheight, iheight, height_scale, ys.data());
-    compute_interpolation_weights(owidth, iwidth, width_scale, xs.data());
-
-    // Scale x interpolation weights to avoid a multiplication during iteration.
-    for (int i = 0; i < xs.size(); ++i) {
-      xs[i].lower *= nchannel;
-      xs[i].upper *= nchannel;
-    }
-
-    DType *input = inputs[0].dptr<DType>();
     DType *output = outputs[0].dptr<DType>();
+    DType *input = inputs[0].dptr<DType>();
 
-    const int in_row_size = iwidth * nchannel;
-    const int in_batch_num_values = iheight * in_row_size;
-    const int out_row_size = owidth * nchannel;
-
-    for (int y = 0; y < oheight; ++y) {
-      const DType *ys_input_lower_ptr = input + ys[y].lower * in_row_size;
-      const DType *ys_input_upper_ptr = input + ys[y].upper * in_row_size;
-      const float ys_lerp = ys[y].lerp;
-
-      for (int x = 0; x < owidth; ++x) {
-        const int xs_lower = xs[x].lower;
-        const int xs_upper = xs[x].upper;
-        const float xs_lerp = xs[x].lerp;
-
-        // Read channel 0.
-        const float top_left0(ys_input_lower_ptr[xs_lower + 0]);
-        const float top_right0(ys_input_lower_ptr[xs_upper + 0]);
-        const float bottom_left0(ys_input_upper_ptr[xs_lower + 0]);
-        const float bottom_right0(ys_input_upper_ptr[xs_upper + 0]);
-
-        // Read channel 1.
-        const float top_left1(ys_input_lower_ptr[xs_lower + 1]);
-        const float top_right1(ys_input_lower_ptr[xs_upper + 1]);
-        const float bottom_left1(ys_input_upper_ptr[xs_lower + 1]);
-        const float bottom_right1(ys_input_upper_ptr[xs_upper + 1]);
-
-        // Read channel 2.
-        const float top_left2(ys_input_lower_ptr[xs_lower + 2]);
-        const float top_right2(ys_input_lower_ptr[xs_upper + 2]);
-        const float bottom_left2(ys_input_upper_ptr[xs_lower + 2]);
-        const float bottom_right2(ys_input_upper_ptr[xs_upper + 2]);
-
-        // Compute output.
-        output[x * nchannel + 0] =
-          compute_lerp(top_left0, top_right0, bottom_left0, bottom_right0, xs_lerp, ys_lerp);
-
-        output[x * nchannel + 1] =
-          compute_lerp(top_left1, top_right1, bottom_left1, bottom_right1, xs_lerp, ys_lerp);
-
-        output[x * nchannel + 2] =
-          compute_lerp(top_left2, top_right2, bottom_left2, bottom_right2, xs_lerp, ys_lerp);
-      }
-
-      output += out_row_size;
+    if (param.interpolation == 2) {
+      resize_bilinear<DType>(output, input, oheight, owidth, iheight, iwidth, nchannel);
+    } else if (param.interpolation == 3) {
+      resize_bicubic<DType>(output, input, oheight, owidth, iheight, iwidth, nchannel);
     }
   });
 }
