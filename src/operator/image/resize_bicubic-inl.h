@@ -36,25 +36,18 @@ namespace op {
    two extra bits for overflow and int type. */
 #define PRECISION_BITS (32 - 8 - 2)
 
-typedef void* ImagingSectionCookie;
-
 struct filter {
   double (*filter)(double x);
   double support;
 };
 
-void normalize_coeffs_8bpc(int outSize, int ksize, double *prekk) {
+void normalize_coeffs_8bpc(int outSize, int ksize, std::vector<double> &kk) {
   int x;
-  int *kk;
-
-  // use the same buffer for normalized coefficients
-  kk = (int *) prekk;
-
   for (x = 0; x < outSize * ksize; x++) {
-    if (prekk[x] < 0) {
-      kk[x] = (int) (-0.5 + prekk[x] * (1 << PRECISION_BITS));
+    if (kk[x] < 0) {
+      kk[x] = static_cast<int>(-0.5 + kk[x] * (1 << PRECISION_BITS));
     } else {
-      kk[x] = (int) (0.5 + prekk[x] * (1 << PRECISION_BITS));
+      kk[x] = static_cast<int>(0.5 + kk[x] * (1 << PRECISION_BITS));
     }
   }
 }
@@ -101,12 +94,11 @@ static inline uint8_t clip8(int in) {
 }
 
 int precompute_coeffs(int inSize, float in0, float in1, int outSize,
-                      struct filter *filterp, int **boundsp, double **kkp) {
+                      struct filter *filterp,
+                      std::vector<int> &bounds, std::vector<double> &kk) {
   double support, scale, filterscale;
   double center, ww, ss;
   int xx, x, ksize, xmin, xmax;
-  int *bounds;
-  double *kk, *k;
 
   /* prepare for horizontal stretch */
   filterscale = scale = (double) (in1 - in0) / outSize;
@@ -123,18 +115,6 @@ int precompute_coeffs(int inSize, float in0, float in1, int outSize,
   // check for overflow
   CHECK(outSize <= INT_MAX / (ksize * sizeof(double)));
 
-  /* coefficient buffer */
-  /* malloc check ok, overflow checked above */
-  kk = static_cast<double *>(malloc(outSize * ksize * sizeof(double)));
-  CHECK(kk);
-
-  /* malloc check ok, ksize*sizeof(double) > 2*sizeof(int) */
-  bounds = static_cast<int *>(malloc(outSize * 2 * sizeof(int)));
-  if (!bounds) {
-    free(kk);
-    CHECK(bounds);
-  }
-
   for (xx = 0; xx < outSize; xx++) {
     center = in0 + (xx + 0.5) * scale;
     ww = 0.0;
@@ -148,25 +128,23 @@ int precompute_coeffs(int inSize, float in0, float in1, int outSize,
     if (xmax > inSize)
       xmax = inSize;
     xmax -= xmin;
-    k = &kk[xx * ksize];
+    const int k = xx * ksize;
     for (x = 0; x < xmax; x++) {
       double w = filterp->filter((x + xmin - center + 0.5) * ss);
-      k[x] = w;
+      kk[k + x] = w;
       ww += w;
     }
     for (x = 0; x < xmax; x++) {
       if (ww != 0.0)
-        k[x] /= ww;
+        kk[k + x] /= ww;
     }
     // Remaining values should stay empty if they are used despite of xmax.
     for (; x < ksize; x++) {
-      k[x] = 0;
+      kk[k + x] = 0;
     }
     bounds[xx * 2 + 0] = xmin;
     bounds[xx * 2 + 1] = xmax;
   }
-  *boundsp = bounds;
-  *kkp = kk;
   return ksize;
 }
 
@@ -175,14 +153,12 @@ static void ImagingResampleHorizontal_8bpc(DType *imOut, const DType *imIn,
                                            int oheight, int owidth,
                                            int iheight, int iwidth, int nchannel,
                                            int offset, int ksize,
-                                           int *bounds, double *prekk) {
+                                           std::vector<int> &bounds, std::vector<double> &kk) {
   int ss0, ss1, ss2;
   int xx, yy, x, xmin, xmax;
-  int *k, *kk;
 
   // use the same buffer for normalized coefficients
-  kk = (int *) prekk;
-  normalize_coeffs_8bpc(owidth, ksize, prekk);
+  normalize_coeffs_8bpc(owidth, ksize, kk);
 
   // TODO: nchannel = 3
   const int ilength = iwidth * nchannel;
@@ -192,12 +168,12 @@ static void ImagingResampleHorizontal_8bpc(DType *imOut, const DType *imIn,
     for (xx = 0; xx < owidth; xx++) {
       xmin = bounds[xx * 2 + 0];
       xmax = bounds[xx * 2 + 1];
-      k = &kk[xx * ksize];
+      const int k = xx * ksize;
       ss0 = ss1 = ss2 = 1 << (PRECISION_BITS -1);
       for (x = 0; x < xmax; x++) {
-        ss0 += ((uint8_t) imIn[(yy + offset)*ilength + (x + xmin)*nchannel + 0]) * k[x];
-        ss1 += ((uint8_t) imIn[(yy + offset)*ilength + (x + xmin)*nchannel + 1]) * k[x];
-        ss2 += ((uint8_t) imIn[(yy + offset)*ilength + (x + xmin)*nchannel + 2]) * k[x];
+        ss0 += ((uint8_t) imIn[(yy + offset)*ilength + (x + xmin)*nchannel + 0]) * kk[k + x];
+        ss1 += ((uint8_t) imIn[(yy + offset)*ilength + (x + xmin)*nchannel + 1]) * kk[k + x];
+        ss2 += ((uint8_t) imIn[(yy + offset)*ilength + (x + xmin)*nchannel + 2]) * kk[k + x];
       }
       imOut[yy*olength + xx*nchannel + 0] = clip8(ss0);
       imOut[yy*olength + xx*nchannel + 1] = clip8(ss1);
@@ -211,28 +187,26 @@ static void ImagingResampleVertical_8bpc(DType *imOut, const DType *imIn,
                                          int oheight, int owidth,
                                          int iheight, int iwidth, int nchannel,
                                          int offset, int ksize,
-                                         int *bounds, double *prekk) {
+                                         std::vector<int> &bounds, std::vector<double> &kk) {
   int ss0, ss1, ss2, ss3;
   int xx, yy, y, ymin, ymax;
-  int *k, *kk;
 
   // use the same buffer for normalized coefficients
-  kk = (int *) prekk;
-  normalize_coeffs_8bpc(oheight, ksize, prekk);
+  normalize_coeffs_8bpc(oheight, ksize, kk);
 
   const int ilength = iwidth * nchannel;
   const int olength = owidth * nchannel;
 
   for (yy = 0; yy < oheight; yy++) {
-    k = &kk[yy * ksize];
+    const int k = yy * ksize;
     ymin = bounds[yy * 2 + 0];
     ymax = bounds[yy * 2 + 1];
     for (xx = 0; xx < owidth; xx++) {
       ss0 = ss1 = ss2 = 1 << (PRECISION_BITS -1);
       for (y = 0; y < ymax; y++) {
-        ss0 += ((uint8_t) imIn[(y + ymin)*ilength + xx*nchannel + 0]) * k[y];
-        ss1 += ((uint8_t) imIn[(y + ymin)*ilength + xx*nchannel + 1]) * k[y];
-        ss2 += ((uint8_t) imIn[(y + ymin)*ilength + xx*nchannel + 2]) * k[y];
+        ss0 += ((uint8_t) imIn[(y + ymin)*ilength + xx*nchannel + 0]) * kk[k + y];
+        ss1 += ((uint8_t) imIn[(y + ymin)*ilength + xx*nchannel + 1]) * kk[k + y];
+        ss2 += ((uint8_t) imIn[(y + ymin)*ilength + xx*nchannel + 2]) * kk[k + y];
       }
       imOut[yy*olength + xx*nchannel + 0] = clip8(ss0);
       imOut[yy*olength + xx*nchannel + 1] = clip8(ss1);
@@ -265,23 +239,44 @@ static void resize_bicubic(DType *output, DType *input,
   int i, need_horizontal, need_vertical;
   int ybox_first, ybox_last;
   int ksize_horiz, ksize_vert;
-  int *bounds_horiz, *bounds_vert;
-  double *kk_horiz, *kk_vert;
 
   need_horizontal = owidth != iwidth;
   need_vertical = oheight != iheight;
 
+////////////
+  /* prepare for horizontal stretch */
+  double filterscale_width = static_cast<double>(iwidth) / owidth;
+  filterscale_width = std::max(filterscale_width, 1.0);
+  /* determine support size (length of resampling filter) */
+  double support_width = filterp->support * filterscale_width;
+  /* maximum number of coeffs */
+  int ksize_width = static_cast<int>(ceil(support_width)) * 2 + 1;
+  /* coefficient buffer */
+  /* malloc check ok, overflow checked above */
+  std::vector<double> kk_horiz(owidth * ksize_width);
+  /* malloc check ok, ksize*sizeof(double) > 2*sizeof(int) */
+  std::vector<int> bounds_horiz(owidth * 2);
+ ///////////
   ksize_horiz = precompute_coeffs(iwidth, 0, iwidth, owidth,
-                                  filterp, &bounds_horiz, &kk_horiz);
+                                  filterp, bounds_horiz, kk_horiz);
   CHECK(ksize_horiz);
 
+  ////////////
+  /* prepare for horizontal stretch */
+  double filterscale_height = static_cast<double>(iheight) / oheight;
+  filterscale_height = std::max(filterscale_height, 1.0);
+  /* determine support size (length of resampling filter) */
+  double support_height = filterp->support * filterscale_height;
+  /* maximum number of coeffs */
+  int ksize_height = static_cast<int>(ceil(support_height)) * 2 + 1;
+  /* coefficient buffer */
+  /* malloc check ok, overflow checked above */
+  std::vector<double> kk_vert(oheight * ksize_height);
+  /* malloc check ok, ksize*sizeof(double) > 2*sizeof(int) */
+  std::vector<int> bounds_vert(oheight * 2);
+  ///////////
   ksize_vert = precompute_coeffs(iheight, 0, iheight, oheight,
-                                 filterp, &bounds_vert, &kk_vert);
-  if (!ksize_vert) {
-    free(bounds_horiz);
-    free(kk_horiz);
-    CHECK(ksize_vert);
-  }
+                                 filterp, bounds_vert, kk_vert);
 
   // First used row in the source image
   ybox_first = bounds_vert[0];
@@ -305,19 +300,9 @@ static void resize_bicubic(DType *output, DType *input,
                                             iheight, iwidth, nchannel,
                                             ybox_first, ksize_horiz, bounds_horiz, kk_horiz);
     }
-    free(bounds_horiz);
-    free(kk_horiz);
-    if (!imTemp) {
-      free(bounds_vert);
-      free(kk_vert);
-      CHECK(imTemp);
-    }
+    CHECK(imTemp);
     input = imTemp;
     std::memcpy(output, imTemp, (ybox_last - ybox_first) * owidth * nchannel);
-  } else {
-    // Free in any case
-    free(bounds_horiz);
-    free(kk_horiz);
   }
 
   /* vertical pass */
@@ -330,12 +315,6 @@ static void resize_bicubic(DType *output, DType *input,
     /* it's safe to call ImagingDelete with empty value
        if previous step was not performed. */
     delete[] imTemp;
-    free(bounds_vert);
-    free(kk_vert);
-  } else {
-    // Free in any case
-    free(bounds_vert);
-    free(kk_vert);
   }
 }
 
