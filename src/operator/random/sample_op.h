@@ -269,17 +269,6 @@ struct Scalar2Array {
   Tensor<xpu, 1, DType> GetTensor() { return Tensor<xpu, 1, DType>(Ref(), Shape1(1)); }
 };
 
-// Convienience function to generate the required number of seeds for sampling
-template<typename xpu>
-MSHADOW_FORCE_INLINE Tensor<xpu, 1, unsigned int> GetSeeds(index_t N, const OpContext& ctx) {
-  Stream<xpu> *s = ctx.get_stream<xpu>();
-  const index_t nSeeds(OptSampleSeedNum<xpu>(N));
-  Tensor<xpu, 1, unsigned int> seeds
-    = ctx.requested[1].get_space_typed<xpu, 1, unsigned int>(Shape1(nSeeds), ctx.get_stream<xpu>());
-  ctx.requested[0].get_random<xpu, float>(s)->GetRandInt(seeds);
-  return seeds;
-}
-
 template<typename xpu, typename Sampler>
 struct SampleMaster;
 
@@ -293,11 +282,11 @@ struct SampleMaster<xpu, UniformSampler<xpu>> {
     const SampleUniformParam& param = nnvm::get<SampleUniformParam>(attrs.parsed);
     CHECK_GE(param.high, param.low) << "low must be less or equal to high in uniform distribution";
     Scalar2Array<xpu, float> low(param.low, ctx), high(param.high, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     UniformSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(low.GetTensor(), high.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(low.GetTensor(), high.GetTensor(), out, s, rnd);
     });
   }
 };
@@ -312,11 +301,11 @@ struct SampleMaster<xpu, NormalSampler<xpu>> {
     const SampleNormalParam& param = nnvm::get<SampleNormalParam>(attrs.parsed);
     CHECK_GT(param.scale, 0) << "scale parameter in gaussian has to be positive";
     Scalar2Array<xpu, float> loc(param.loc, ctx), scale(param.scale, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     NormalSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(loc.GetTensor(), scale.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(loc.GetTensor(), scale.GetTensor(), out, s, rnd);
     });
   }
 };
@@ -332,11 +321,11 @@ struct SampleMaster<xpu, GammaSampler<xpu>> {
     CHECK_GT(param.alpha, 0) << "alpha parameter in gamma distribution has to be positive";
     CHECK_GT(param.beta, 0) << "beta parameter in gamma distribution has to be positive";
     Scalar2Array<xpu, float> alpha(param.alpha, ctx), beta(param.beta, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     GammaSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(alpha.GetTensor(), beta.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(alpha.GetTensor(), beta.GetTensor(), out, s, rnd);
     });
   }
 };
@@ -351,11 +340,11 @@ struct SampleMaster<xpu, ExponentialSampler<xpu>> {
     const SampleExponentialParam& param = nnvm::get<SampleExponentialParam>(attrs.parsed);
     CHECK_GT(param.lam, 0) << "lambda parameter in exponential distribution has to be positive";
     Scalar2Array<xpu, float> lam(param.lam, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     ExponentialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(lam.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(lam.GetTensor(), out, s, rnd);
     });
   }
 };
@@ -370,11 +359,11 @@ struct SampleMaster<xpu, PoissonSampler<xpu>> {
     const SamplePoissonParam& param = nnvm::get<SamplePoissonParam>(attrs.parsed);
     CHECK_GE(param.lam, 0) << "lambda parameter in poisson distribution has to be non-negative";
     Scalar2Array<xpu, float> lam(param.lam, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     PoissonSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(lam.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(lam.GetTensor(), out, s, rnd);
     });
   }
 };
@@ -390,11 +379,11 @@ struct SampleMaster<xpu, NegativeBinomialSampler<xpu>> {
     CHECK_GE(param.k, 0) << "k parameter in negative binomial distribution has to be non-negative";
     CHECK_GE(param.p, 0) << "p parameter in negative binomial distribution has to be non-negative";
     Scalar2Array<xpu, float> k(param.k, ctx), p(param.p, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     NegativeBinomialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(k.GetTensor(), p.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(k.GetTensor(), p.GetTensor(), out, s, rnd);
     });
   }
 };
@@ -412,11 +401,11 @@ struct SampleMaster<xpu, GeneralizedNegativeBinomialSampler<xpu>> {
     CHECK_GE(param.alpha, 0)
       << "alpha parameter in generalized negative binomial distribution has to be non-negative";
     Scalar2Array<xpu, float> mu(param.mu, ctx), alpha(param.alpha, ctx);
-    Tensor<xpu, 1, unsigned int> seeds(GetSeeds<xpu>(outputs->Size(), ctx));
     GeneralizedNegativeBinomialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
-      sampler.Sample(mu.GetTensor(), alpha.GetTensor(), out, seeds, s);
+      Random<xpu, OType> *rnd = ctx.requested[0].get_random<xpu, OType>(s);
+      sampler.Sample(mu.GetTensor(), alpha.GetTensor(), out, s, rnd);
     });
   }
 };
