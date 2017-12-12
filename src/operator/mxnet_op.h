@@ -36,6 +36,8 @@
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
+#include <curand.h>
+#include <curand_kernel.h>
 #endif  // __CUDACC__
 
 namespace mxnet {
@@ -351,6 +353,65 @@ struct op_with_req {
   }
 };
 
+// Elementary random number generation for int/uniform/gaussian in CPU and GPU.
+// Will use float data type whenever instantiated for half_t or any other non
+// standard real type.
+template<typename xpu, typename DType>
+class RandGenerator;
+
+template<typename DType>
+class RandGenerator<cpu, DType> {
+public:
+  typedef typename std::conditional<std::is_floating_point<DType>::value,
+  DType, float>::type FType;
+  std::mt19937 engine;
+  std::uniform_real_distribution<FType> uniformNum;
+  std::normal_distribution<FType> normalNum;
+  explicit RandGenerator(unsigned int seed): engine(seed) {}
+  MSHADOW_XINLINE int rand() { return engine(); }
+  MSHADOW_XINLINE FType uniform() { return uniformNum(engine); }
+  MSHADOW_XINLINE FType normal() { return normalNum(engine); }
+};
+
+#ifdef __CUDACC__
+
+// uniform number generation in Cuda made consistent with stl (include 0 but exclude 1)
+// by using 1.0-curand_uniform(). Needed as some samplers below won't be able to deal with
+// one of the boundary cases.
+template<typename DType>
+class RandGenerator<gpu, DType> {
+public:
+  __device__ RandGenerator(unsigned int seed) : seed_(seed) {}
+  MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
+    curand_init(seed_, subsequence, offset, &state_);
+  }
+  MSHADOW_FORCE_INLINE __device__ int rand() { return curand(&state_); }
+  MSHADOW_FORCE_INLINE __device__ float uniform()
+  { return static_cast<float>(1.0) - curand_uniform(&state_); }
+  MSHADOW_FORCE_INLINE __device__ float normal() { return curand_normal(&state_); }
+private:
+  unsigned int seed_;
+  curandState_t state_;
+};
+
+template<>
+class RandGenerator<gpu, double> {
+public:
+  __device__ RandGenerator(unsigned int seed) : seed_(seed) {}
+  MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
+    curand_init(seed_, subsequence, offset, &state_);
+  }
+  MSHADOW_FORCE_INLINE __device__ int rand() { return curand(&state_); }
+  MSHADOW_FORCE_INLINE __device__ double uniform()
+  { return static_cast<double>(1.0) - curand_uniform_double(&state_); }
+  MSHADOW_FORCE_INLINE __device__ double normal() { return curand_normal_double(&state_); }
+private:
+  unsigned int seed_;
+  curandState_t state_;
+};
+
+#endif  // __CUDACC__
+
 template<typename OP, typename xpu>
 struct Kernel;
 
@@ -448,6 +509,29 @@ struct Kernel<OP, cpu> {
 #endif
   }
 
+  template<typename GType, typename ...Args>
+  inline static void LaunchRnd(mshadow::Stream<cpu> *s,
+                               unsigned int seed, const int N, Args... args) {
+    RandGenerator<cpu, GType> rnd(seed);
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, &rnd, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, &rnd, args...);
+      }
+    }
+#else
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, &rnd, args...);
+    }
+#endif
+  }
+
   /*!
    * \brief Launch a tunable OP with implicitly-supplied data type
    * \tparam DType Data type
@@ -502,6 +586,16 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
   }
 }
 
+template<typename OP, typename GType, typename ...Args>
+__global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  RandGenerator<gpu, GType> rnd(seed);
+  rnd.init(i, 0);
+  for (; i < N; i += blockDim.x * gridDim.x) {
+    OP::Map(i, &rnd, args...);
+  }
+}
+
 template<typename OP>
 struct Kernel<OP, gpu> {
   /*! \brief Launch GPU kernel */
@@ -521,6 +615,16 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel_ex<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+  }
+
+  template<typename GType, typename ...Args>
+  inline static void LaunchRnd(mshadow::Stream<gpu> *s, unsigned int seed,
+                               const int N, Args... args) {
+    using namespace mshadow::cuda;
+    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+    mxnet_generic_kernel_rnd<OP, GType, Args...>
+      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        N, seed, args...);
   }
 };
 #endif  // __CUDACC__
