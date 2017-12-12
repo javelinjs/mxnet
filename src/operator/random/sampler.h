@@ -49,9 +49,15 @@ struct UniformSampler {
                                    const Tensor<xpu, 1, IType>& upper,
                                    const Tensor<xpu, 1, OType>& out,
                                    Stream<xpu> *s) {
+    /*
     Kernel<SampleUniformKernel<xpu>, xpu>
       ::template LaunchRnd<OType>(s, 100, out.size(0), lower.size(0), out.size(0),
                          lower.dptr_, upper.dptr_, out.dptr_);
+                         */
+    RandGenerator<xpu, OType> gen(100);
+    Kernel<SampleUniformKernel<xpu>, xpu>
+      ::template LaunchRndTest<OType>(s, &gen, out.size(0), lower.size(0), out.size(0),
+                                lower.dptr_, upper.dptr_, out.dptr_);
   }
 };
 

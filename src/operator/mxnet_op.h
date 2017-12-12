@@ -532,6 +532,28 @@ struct Kernel<OP, cpu> {
 #endif
   }
 
+  template<typename GType, typename ...Args>
+  inline static void LaunchRndTest(mshadow::Stream<cpu> *s,
+                               RandGenerator<cpu, GType> *rnd, const int N, Args... args) {
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, rnd, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, rnd, args...);
+      }
+    }
+#else
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, &rnd, args...);
+    }
+#endif
+  }
+
   /*!
    * \brief Launch a tunable OP with implicitly-supplied data type
    * \tparam DType Data type
@@ -596,6 +618,15 @@ __global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args)
   }
 }
 
+template<typename OP, typename GType, typename ...Args>
+__global__ void mxnet_generic_kernel_rnd_test(int N, RandGenerator<gpu, GType> *rnd, Args... args) {
+  int i = blockIdx.x * blockDim.x + threadIdx.x;
+  rnd->init(i, 0);
+  for (; i < N; i += blockDim.x * gridDim.x) {
+    OP::Map(i, rnd, args...);
+  }
+}
+
 template<typename OP>
 struct Kernel<OP, gpu> {
   /*! \brief Launch GPU kernel */
@@ -625,6 +656,16 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel_rnd<OP, GType, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, seed, args...);
+  }
+
+  template<typename GType, typename ...Args>
+  inline static void LaunchRndTest(mshadow::Stream<gpu> *s, RandGenerator<gpu, GType> *rnd,
+                               const int N, Args... args) {
+    using namespace mshadow::cuda;
+    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+    mxnet_generic_kernel_rnd<OP, GType, Args...>
+    <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+    N, rnd, args...);
   }
 };
 #endif  // __CUDACC__
