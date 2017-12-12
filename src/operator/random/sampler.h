@@ -44,6 +44,27 @@ struct UniformSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    Stream<xpu> *s,
                                    Random<xpu, OType> *gen) {
+    // TODO
+  }
+  template<typename IType>
+  MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lower,
+                                   const Tensor<xpu, 1, IType>& upper,
+                                   const Tensor<xpu, 1, double>& out,
+                                   Stream<xpu> *s,
+                                   Random<xpu, double> *gen) {
+    index_t batchSize(lower.size(0));
+    index_t nBatch(1 + (out.size(0) - 1) / batchSize);
+    for (index_t i = 0; i < nBatch; ++i) {
+      auto dst = out.Slice(i * batchSize, std::min(out.size(0), i * batchSize + batchSize));
+      gen->SampleUniform(&dst, lower.dptr_[i], upper.dptr_[i]);
+    }
+  }
+  template<typename IType>
+  MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lower,
+                                   const Tensor<xpu, 1, IType>& upper,
+                                   const Tensor<xpu, 1, float>& out,
+                                   Stream<xpu> *s,
+                                   Random<xpu, float> *gen) {
     index_t batchSize(lower.size(0));
     index_t nBatch(1 + (out.size(0) - 1) / batchSize);
     for (index_t i = 0; i < nBatch; ++i) {
@@ -61,6 +82,32 @@ struct NormalSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    Stream<xpu> *s,
                                    Random<xpu, OType> *gen) {
+    index_t batchSize(mean.size(0));
+    index_t nBatch(1 + (out.size(0) - 1) / batchSize);
+    for (index_t i = 0; i < nBatch; ++i) {
+      auto dst = out.Slice(i * batchSize, std::min(out.size(0), i * batchSize + batchSize));
+      gen->SampleGaussian(&dst, mean.dptr_[i], std.dptr_[i]);
+    }
+  }
+  template<typename IType>
+  MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& mean,
+                                   const Tensor<xpu, 1, IType>& std,
+                                   const Tensor<xpu, 1, float>& out,
+                                   Stream<xpu> *s,
+                                   Random<xpu, float> *gen) {
+    index_t batchSize(mean.size(0));
+    index_t nBatch(1 + (out.size(0) - 1) / batchSize);
+    for (index_t i = 0; i < nBatch; ++i) {
+      auto dst = out.Slice(i * batchSize, std::min(out.size(0), i * batchSize + batchSize));
+      gen->SampleGaussian(&dst, mean.dptr_[i], std.dptr_[i]);
+    }
+  }
+  template<typename IType>
+  MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& mean,
+                                   const Tensor<xpu, 1, IType>& std,
+                                   const Tensor<xpu, 1, double>& out,
+                                   Stream<xpu> *s,
+                                   Random<xpu, double> *gen) {
     index_t batchSize(mean.size(0));
     index_t nBatch(1 + (out.size(0) - 1) / batchSize);
     for (index_t i = 0; i < nBatch; ++i) {
