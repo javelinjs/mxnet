@@ -37,17 +37,6 @@ namespace mxnet {
 namespace op {
 
 template<typename xpu>
-struct SampleUniformKernel {
-  template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, index_t nParm, index_t nSample,
-                                  const IType *lower, const IType *upper, OType *out,
-                                  Random<xpu, OType> *gen) {
-    index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = gen->SampleUniform(lower[i/nBatch], upper[i/nBatch]);
-  }
-};
-
-template<typename xpu>
 struct UniformSampler {
   template<typename IType, typename OType>
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lower,
@@ -55,20 +44,12 @@ struct UniformSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    Stream<xpu> *s,
                                    Random<xpu, OType> *gen) {
-    Kernel<SampleUniformKernel<xpu>, xpu>
-      ::Launch(s, out.size(0), lower.size(0), out.size(0),
-               lower.dptr_, upper.dptr_, out.dptr_, gen);
-  }
-};
-
-template<typename xpu>
-struct SampleNormalKernel {
-  template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, index_t nParm, index_t nSample,
-                                  const IType *mean, const IType *std, OType *out,
-                                  Random<xpu, OType> *gen) {
-    index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = gen->SampleGaussian(mean[i/nBatch], std[i/nBatch]);
+    index_t batchSize(lower.size(0));
+    index_t nBatch(1 + (out.size(0) - 1) / batchSize);
+    for (index_t i = 0; i < nBatch; ++i) {
+      auto dst = out.Slice(i * batchSize, std::min(out.size(0), i * batchSize + batchSize));
+      gen->SampleUniform(&dst, lower.dptr_[i], upper.dptr_[i]);
+    }
   }
 };
 
@@ -80,20 +61,12 @@ struct NormalSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    Stream<xpu> *s,
                                    Random<xpu, OType> *gen) {
-    Kernel<SampleNormalKernel<xpu>, xpu>
-      ::Launch(s, out.size(0), mean.size(0), out.size(0),
-               mean.dptr_, std.dptr_, out.dptr_, gen);
-  }
-};
-
-template<typename xpu>
-struct SampleExponentialKernel {
-  template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, index_t nParm, index_t nSample,
-                                  const IType *lambda, OType *out,
-                                  Random<xpu, OType> *gen) {
-    index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(-log(1.0-gen->template SampleUniform<IType>()) / lambda[i/nBatch]);
+    index_t batchSize(mean.size(0));
+    index_t nBatch(1 + (out.size(0) - 1) / batchSize);
+    for (index_t i = 0; i < nBatch; ++i) {
+      auto dst = out.Slice(i * batchSize, std::min(out.size(0), i * batchSize + batchSize));
+      gen->SampleGaussian(&dst, mean.dptr_[i], std.dptr_[i]);
+    }
   }
 };
 
@@ -104,31 +77,44 @@ struct ExponentialSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    Stream<xpu> *s,
                                    Random<xpu, OType> *gen) {
-    Kernel<SampleExponentialKernel<xpu>, xpu>
-      ::Launch(s, out.size(0), lambda.size(0), out.size(0),
-               lambda.dptr_, out.dptr_, gen);
+    index_t batchSize(lambda.size(0));
+    index_t nBatch(1 + (out.size(0) - 1) / batchSize);
+    auto output = out.FlatTo1D();
+    gen->SampleUniform(&output, 0.0f, 1.0f);
+    for (index_t i = 0; i < out.size(0); ++i) {
+      out.dptr_[i] = OType(-log(1.0-output[i]) / lambda[i/nBatch]);
+    }
   }
 };
 
 template<typename xpu, typename IType, typename OType>
 MSHADOW_XINLINE OType SampleGamma(IType a, IType b, Random<xpu, OType> *gen) {
+  // OType sample;
   // Generate one sample of the gamma distribution
-  OType sample;
+  Tensor<xpu, 1, OType> sample(Shape1(1));
   OType d = a < 1 ? a + 2.0 / 3.0 : a - 1.0 / 3.0;
   OType k = sqrt(9.0 * d);
   OType c = 1.0 / k;
   while (1) {
-    OType Z = gen->template SampleGaussian<IType>();
+    gen->SampleGaussian(&sample, 0.0f, 1.0f);
+    OType Z = sample.dptr_[0];
     if (Z > -k) {
       OType x = 1.0 + c * Z;
       OType V = x * x * x;
-      if (log(1.0-gen->template SampleUniform<IType>()) < 0.5 * Z * Z + d * (1.0 - V + log(V))) {
-        sample = d * V * b;
+      gen->SampleUniform(&sample, 0.0f, 1.0f);
+      if (log(1.0-sample.dptr_[0]) < 0.5 * Z * Z + d * (1.0 - V + log(V))) {
+        sample.dptr_[0] = d * V * b;
         break;
       }
     }
   }
-  return a < 1 ? sample * pow(gen->template SampleUniform<IType>(), OType(1.0 / a)) : sample;
+  OType g = sample.dptr_[0];
+  if (a >= 1) {
+    gen->SampleUniform(&sample, 0.0f, 1.0f);
+    g *= pow(sample.dptr_[0], OType(1.0 / a));
+  }
+  FreeSpace(&sample);
+  return g;
 }
 
 template<typename xpu>
@@ -136,7 +122,8 @@ struct SampleGammaKernel {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(int i, index_t nParm, index_t nSample,
                                   const IType *alpha, const IType *beta,
-                                  OType *out, Random<xpu, OType> *gen) {
+                                  OType *out,
+                                  Random<xpu, OType> *gen) {
     index_t nBatch(1 + (nSample - 1) / nParm);
     out[i] = SampleGamma(alpha[i/nBatch], beta[i/nBatch], gen);
   }
@@ -161,13 +148,16 @@ MSHADOW_XINLINE int SamplePoisson(float lambda, Random<xpu, GType> *gen) {
   // Generate one sample of the poisson distribution. Intentionally written
   // towards a specific type (float) for internal computation which is sufficient
   // for accurate enough computation.
+  Tensor<xpu, 1, GType> sample(Shape1(1));
+  int x = 0;
   if ( lambda < 12.0 ) {
     float t = expf(-lambda);
-    int x = 0;
-    for (float prod = gen->template SampleUniform<float>();
-         prod > t;
-         prod *= gen->template SampleUniform<float>()) {
+    gen->SampleUniform(&sample, 0.0f, 1.0f);
+    float prod = sample.dptr_[0];
+    while (prod > t) {
       x += 1;
+      gen->SampleUniform(&sample, 0.0f, 1.0f);
+      prod *= sample.dptr_[0];
     }
     return x;
   } else {
@@ -181,14 +171,18 @@ MSHADOW_XINLINE int SamplePoisson(float lambda, Random<xpu, GType> *gen) {
     float em(0), t(0), y(0);
     do {
       do {
-        y = tanf(pi * gen->template SampleUniform<float>());
+        gen->SampleUniform(&sample, 0.0f, 1.0f);
+        y = tanf(pi * sample.dptr_[0]);
         em = sq * y + lambda;
       } while (em < 0.0);
       em = floorf(em);
       t = 0.9 * (1.0 + y * y) * expf(em * loglambda - lgammaf(em + 1.0) - g);
-    } while (gen->template SampleUniform<float>() > t);
-    return static_cast<int>(em);
+      gen->SampleUniform(&sample, 0.0f, 1.0f);
+    } while (sample.dptr_[0] > t);
+    x = static_cast<int>(em);
   }
+  FreeSpace(&sample);
+  return x;
 }
 
 template<typename xpu>
