@@ -21,7 +21,7 @@ using namespace mshadow;
 template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
-template<typename DType MSHADOW_DEFAULT_DTYPE>
+template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
   typedef typename std::conditional<std::is_floating_point<DType>::value,
