@@ -4,11 +4,11 @@
 #include <mxnet/base.h>
 #include <random>
 
-#ifdef __CUDACC__
+//#ifdef __CUDACC__
 #include "./cuda_utils.h"
 #include <curand.h>
 #include <curand_kernel.h>
-#endif  // __CUDACC__
+//#endif  // __CUDACC__
 
 using namespace mshadow;
 
@@ -18,8 +18,8 @@ using namespace mshadow;
 // Elementary random number generation for int/uniform/gaussian in CPU and GPU.
 // Will use float data type whenever instantiated for half_t or any other non
 // standard real type.
-//template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
-//class RandGenerator;
+template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
+class RandGenerator;
 
 template<typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator<cpu, DType> {
@@ -36,7 +36,6 @@ public:
   MSHADOW_XINLINE FType normal(unsigned int i = 0) { return normalNum(engine); }
 };
 
-#ifdef __CUDACC__
 
 #define CURAND_STATE_SIZE 64
 
@@ -62,7 +61,6 @@ public:
   curandState_t states_[CURAND_STATE_SIZE];
 };
 
-/*
 template<>
 class RandGenerator<gpu, double> {
 public:
@@ -82,9 +80,8 @@ public:
 private:
   curandState_t states_[CURAND_STATE_SIZE];
 };
-*/
 
-#endif  // __CUDACC__
+//#endif  // __CUDACC__
 //}
 //}
 
