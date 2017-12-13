@@ -276,7 +276,7 @@ class ResourceManagerImpl : public ResourceManager {
       mshadow::SetDevice<xpu>(ctx.dev_id);
       resource.var = Engine::Get()->NewVariable();
       if (ctx.dev_mask() == Context::kCPU) {
-        pgen = new RandGenerator<xpu>(ctx.dev_id + global_seed * kRandMagic);
+        pgen = new RandGenerator<xpu, float>(ctx.dev_id + global_seed * kRandMagic);
       } else {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
