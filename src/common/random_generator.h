@@ -46,15 +46,15 @@ public:
 template<typename DType>
 class RandGenerator<gpu, DType> {
 public:
-  __device__ __host__ RandGenerator() {}
+  __device__ __host__ RandGenerator(unsigned int seed) {}
   MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
-    curand_init(seed_, subsequence, offset, states_);
+    // curand_init(seed_, subsequence, offset, states_);
   }
   MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
     return curand(&(states_[i % CURAND_STATE_SIZE]));
   }
   MSHADOW_FORCE_INLINE __device__ float uniform(unsigned int i = 0) {
-    return static_cast<float>(1.0) - curand_uniform(&(states_[i % CURAND_STATE_SIZE]);
+    return static_cast<float>(1.0) - curand_uniform(&(states_[i % CURAND_STATE_SIZE]));
   }
   MSHADOW_FORCE_INLINE __device__ float normal(unsigned int i = 0) {
     return curand_normal(&(states_[i % CURAND_STATE_SIZE]));
