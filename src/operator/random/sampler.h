@@ -38,7 +38,7 @@ struct SampleUniformKernel {
                                   index_t nParm, index_t nSample,
                                   const IType *lower, const IType *upper, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(lower[i/nBatch] + (upper[i/nBatch] - lower[i/nBatch]) * gen->uniform());
+    out[i] = OType(lower[i/nBatch] + (upper[i/nBatch] - lower[i/nBatch]) * gen->uniform(i));
   }
 };
 
@@ -56,7 +56,7 @@ struct UniformSampler {
                          lower.dptr_, upper.dptr_, out.dptr_);
                          */
     Kernel<SampleUniformKernel<xpu>, xpu>
-      ::template Launch(s, out.size(0), pgen, lower.size(0), out.size(0),
+      ::LaunchRndTest(s, pgen, out.size(0), lower.size(0), out.size(0),
                                 lower.dptr_, upper.dptr_, out.dptr_);
   }
 };

@@ -33,6 +33,7 @@
 #include <algorithm>
 #include "./operator_tune.h"
 #include "../engine/openmp.h"
+#include "../common/random_generator.h"
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -490,7 +491,7 @@ struct Kernel<OP, cpu> {
     }
 #else
     for (int i = 0; i < N; ++i) {
-      OP::Map(i, &rnd, args...);
+      OP::Map(i, rnd, args...);
     }
 #endif
   }
@@ -552,8 +553,7 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 template<typename OP, typename GType, typename ...Args>
 __global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  RandGenerator<gpu, GType> rnd(seed);
-  rnd.init(i, 0);
+  RandGenerator<gpu, GType> rnd();
   for (; i < N; i += blockDim.x * gridDim.x) {
     OP::Map(i, &rnd, args...);
   }
@@ -562,7 +562,6 @@ __global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args)
 template<typename OP, typename GType, typename ...Args>
 __global__ void mxnet_generic_kernel_rnd_test(int N, RandGenerator<gpu, GType> *rnd, Args... args) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  rnd->init(i, 0);
   for (; i < N; i += blockDim.x * gridDim.x) {
     OP::Map(i, rnd, args...);
   }
@@ -603,9 +602,8 @@ struct Kernel<OP, gpu> {
   inline static void LaunchRndTest(mshadow::Stream<gpu> *s, RandGenerator<gpu, GType> *rnd,
                                const int N, Args... args) {
     using namespace mshadow::cuda;
-    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel_rnd_test<OP, GType, Args...>
-    <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+    <<<1, CURAND_STATE_SIZE, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
     N, rnd, args...);
   }
 };

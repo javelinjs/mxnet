@@ -28,9 +28,9 @@ public:
   std::normal_distribution<FType> normalNum;
   explicit RandGenerator(unsigned int seed): engine(seed) {}
   MSHADOW_XINLINE void Seed(unsigned int seed) { engine.seed(seed); }
-  MSHADOW_XINLINE int rand() { return engine(); }
-  MSHADOW_XINLINE FType uniform() { return uniformNum(engine); }
-  MSHADOW_XINLINE FType normal() { return normalNum(engine); }
+  MSHADOW_XINLINE int rand(unsigned int i = 0) { return engine(); }
+  MSHADOW_XINLINE FType uniform(unsigned int i = 0) { return uniformNum(engine); }
+  MSHADOW_XINLINE FType normal(unsigned int i = 0) { return normalNum(engine); }
 };
 
 #ifdef __CUDACC__
@@ -43,14 +43,19 @@ public:
 template<typename DType>
 class RandGenerator<gpu, DType> {
 public:
-  __device__ RandGenerator(unsigned int seed) : seed_(seed) {}
+  __device__ __host__ RandGenerator() {}
   MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
-    curand_init(seed_, subsequence, offset, &state_);
+    curand_init(seed_, subsequence, offset, states_);
   }
-  MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i) { return curand(&state_); }
-  MSHADOW_FORCE_INLINE __device__ float uniform(unsigned int i)
-  { return static_cast<float>(1.0) - curand_uniform(&state_); }
-  MSHADOW_FORCE_INLINE __device__ float normal(unsigned int i) { return curand_normal(&state_); }
+  MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
+    return curand(&(states_[i % CURAND_STATE_SIZE]));
+  }
+  MSHADOW_FORCE_INLINE __device__ float uniform(unsigned int i = 0) {
+    return static_cast<float>(1.0) - curand_uniform(&(states_[i % CURAND_STATE_SIZE]);
+  }
+  MSHADOW_FORCE_INLINE __device__ float normal(unsigned int i = 0) {
+    return curand_normal(&(states_[i % CURAND_STATE_SIZE]));
+  }
 private:
   curandState_t[CURAND_STATE_SIZE] states_;
 };
@@ -58,21 +63,27 @@ private:
 template<>
 class RandGenerator<gpu, double> {
 public:
-  __device__ RandGenerator(unsigned int seed) : seed_(seed) {}
+  __device__ __host__ RandGenerator() {}
   MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
-    curand_init(seed_, subsequence, offset, &state_);
+    curand_init(seed_, subsequence, offset, states_);
   }
-  MSHADOW_FORCE_INLINE __device__ int rand() { return curand(&state_); }
-  MSHADOW_FORCE_INLINE __device__ double uniform()
-  { return static_cast<double>(1.0) - curand_uniform_double(&state_); }
-  MSHADOW_FORCE_INLINE __device__ double normal() { return curand_normal_double(&state_); }
+  MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
+    return curand(&(states_[i % CURAND_STATE_SIZE]));
+  }
+  MSHADOW_FORCE_INLINE __device__ double uniform(unsigned int i = 0) {
+    return static_cast<double>(1.0) - curand_uniform_double(&(states_[i % CURAND_STATE_SIZE]);
+  }
+  MSHADOW_FORCE_INLINE __device__ double normal(unsigned int i = 0) {
+    return curand_normal_double(&(states_[i % CURAND_STATE_SIZE]));
+  }
 private:
-  unsigned int seed_;
-  curandState_t state_;
+  curandState_t[CURAND_STATE_SIZE] states_;
 };
 
 __global__ void RandGeneratorInit(RandGenerator<gpu> *pgen, unsigned int seed) {
-
+  for (int i = 0; i < CURAND_STATE_SIZE; ++i) {
+    curand_init(seed, 0, 0, &(pgen->states[i]));
+  }
 }
 
 #endif  // __CUDACC__

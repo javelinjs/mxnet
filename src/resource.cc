@@ -106,7 +106,7 @@ class ResourceManagerImpl : public ResourceManager {
 #if MXNET_USE_CUDA
     gpu_rand_.Clear();
     gpu_space_.Clear();
-    // TODO: gpu_sampler_
+    gpu_sampler_.Clear();
 #endif
     if (engine_ref_ != nullptr) {
       engine_ref_ = nullptr;
@@ -140,6 +140,11 @@ class ResourceManagerImpl : public ResourceManager {
           return gpu_space_.Get(ctx.dev_id, [ctx, this]() {
               return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
             })->GetNext();
+        }
+        case ResourceRequest::kSampler: {
+          return gpu_sampler_.Get(ctx.dev_id, [ctx, this]() {
+            return new ResourceSampler<gpu>(ctx, global_seed_);
+          })->resource;
         }
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
@@ -271,6 +276,7 @@ class ResourceManagerImpl : public ResourceManager {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
         CUDA_CALL(cudaMalloc(&pgen, sizeof(RandGenerator<xpu>)));
+        RandGeneratorInit<<<1, 1>>>(pgen, ctx.dev_id + global_seed * kRandMagic);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
