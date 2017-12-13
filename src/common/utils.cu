@@ -26,19 +26,20 @@
 #include "../operator/tensor/cast_storage-inl.h"
 #include "./random_generator.h"
 
-__global__ void RandGeneratorInit(RandGenerator<gpu, float> *pgen, unsigned int seed) {
+template<typename DType>
+__global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int seed) {
   for (int i = 0; i < 64; ++i) {
     curand_init(seed, 0, 0, &(pgen->states_[i]));
   }
 }
 
 template<typename DType>
-void RndInit(RandGenerator<gpu, DType> *pgen, int global_seed) {
+void RndInit(RandGenerator<gpu, DType> *pgen, unsigned int global_seed) {
   RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
 }
 
 template<typename DType>
-void RndInit(RandGenerator<cpu, DType> *pgen, int global_seed) {
+void RndInit(RandGenerator<cpu, DType> *pgen, unsigned int global_seed) {
 }
 
 namespace mxnet {

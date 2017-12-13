@@ -39,11 +39,11 @@
 #include "./common/random_generator.h"
 #include "./common/lazy_alloc_array.h"
 
+template<typename xpu, typename DType>
+extern void RndInit(RandGenerator<xpu, DType> *pgen, unsigned int global_seed);
+
 namespace mxnet {
 namespace resource {
-
-template<typename xpu, typename DType>
-extern void RndInit(RandGenerator<xpu, DType> *pgen, int global_seed);
 
 // internal structure for space allocator
 struct SpaceAllocator {
