@@ -24,6 +24,7 @@
 
 #include "./utils.h"
 #include "../operator/tensor/cast_storage-inl.h"
+#include "./random_generator.h"
 
 namespace mxnet {
 namespace common {
@@ -39,6 +40,16 @@ void CastStorageDispatch<gpu>(const OpContext& ctx,
                               const NDArray& input,
                               const NDArray& output) {
   mxnet::op::CastStorageComputeImpl<gpu>(ctx, input, output);
+}
+
+__global__ void RandGeneratorInit(RandGenerator<gpu, float> *pgen, unsigned int seed) {
+  for (int i = 0; i < 64; ++i) {
+    curand_init(seed, 0, 0, &(pgen->states[i]));
+  }
+}
+
+void RndInit(RandGenerator<gpu, float> *pgen, int global_seed) {
+  RandGeneratorInit<<< 1, 1 >>>(pgen, global_seed);
 }
 
 }  // namespace common
