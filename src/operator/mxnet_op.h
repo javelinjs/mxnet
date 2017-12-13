@@ -553,9 +553,9 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 template<typename OP, typename GType, typename ...Args>
 __global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args) {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
-  RandGenerator<gpu, float> rnd();
+  // RandGenerator<gpu, float> rnd();
   for (; i < N; i += blockDim.x * gridDim.x) {
-    OP::Map(i, &rnd, args...);
+    // OP::Map(i, &rnd, args...);
   }
 }
 
