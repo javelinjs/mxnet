@@ -35,7 +35,6 @@
 #include "./common/cuda_utils.h"
 #include <curand.h>
 #include <curand_kernel.h>
-#include "./common/utils.cu"
 #endif  // MXNET_USE_CUDA
 #include "./common/random_generator.h"
 #include "./common/lazy_alloc_array.h"
@@ -283,7 +282,7 @@ class ResourceManagerImpl : public ResourceManager {
 #if MSHADOW_USE_CUDA
         RandGenerator<gpu, float> *ppgen = (RandGenerator<gpu, float> *)(pgen);
         CUDA_CALL(cudaMalloc(&ppgen, sizeof(RandGenerator<xpu, float>)));
-        mxnet::common::RndInit(ppgen, global_seed);
+        // mxnet::common::RndInit(ppgen, global_seed);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
