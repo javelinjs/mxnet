@@ -31,11 +31,22 @@
 #include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
+#ifdef MXNET_USE_CUDA
+#include "./common/cuda_utils.h"
+#endif  // MXNET_USE_CUDA
 #include "./common/random_generator.h"
 #include "./common/lazy_alloc_array.h"
 
 namespace mxnet {
 namespace resource {
+
+#ifdef MXNET_USE_CUDA
+__global__ void RandGeneratorInit(RandGenerator<gpu, float> *pgen, unsigned int seed) {
+  for (int i = 0; i < 64; ++i) {
+    curand_init(seed, 0, 0, &(pgen->states[i]));
+  }
+}
+#endif
 
 // internal structure for space allocator
 struct SpaceAllocator {
@@ -275,7 +286,7 @@ class ResourceManagerImpl : public ResourceManager {
       } else {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
-        CUDA_CALL(cudaMalloc(&pgen, sizeof(RandGenerator<xpu>)));
+        CUDA_CALL(cudaMalloc(&pgen, sizeof(RandGenerator<xpu, float>)));
         RandGeneratorInit<<<1, 1>>>(pgen, ctx.dev_id + global_seed * kRandMagic);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;

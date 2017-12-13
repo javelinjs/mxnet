@@ -57,9 +57,10 @@ public:
     return curand_normal(&(states_[i % CURAND_STATE_SIZE]));
   }
 private:
-  curandState_t[CURAND_STATE_SIZE] states_;
+  curandState_t states_[CURAND_STATE_SIZE];
 };
 
+/*
 template<>
 class RandGenerator<gpu, double> {
 public:
@@ -77,14 +78,10 @@ public:
     return curand_normal_double(&(states_[i % CURAND_STATE_SIZE]));
   }
 private:
-  curandState_t[CURAND_STATE_SIZE] states_;
+  curandState_t states_[CURAND_STATE_SIZE];
 };
+*/
 
-__global__ void RandGeneratorInit(RandGenerator<gpu> *pgen, unsigned int seed) {
-  for (int i = 0; i < CURAND_STATE_SIZE; ++i) {
-    curand_init(seed, 0, 0, &(pgen->states[i]));
-  }
-}
 
 #endif  // __CUDACC__
 
