@@ -289,9 +289,9 @@ class ResourceManagerImpl : public ResourceManager {
       } else {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
-        RandGenerator<gpu, float> *ppgen = static_cast<RandGenerator<gpu, float> *>(pgen);
+        RandGenerator<gpu, float> *ppgen = (RandGenerator<gpu, float> *)(pgen);
         CUDA_CALL(cudaMalloc(&ppgen, sizeof(RandGenerator<xpu, float>)));
-        RndInit(ppgen, global_seed);
+        mxnet::common::RndInit(ppgen, global_seed);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif

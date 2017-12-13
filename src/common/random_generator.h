@@ -12,6 +12,9 @@
 
 using namespace mshadow;
 
+//namespace mxnet {
+//namespace common {
+
 // Elementary random number generation for int/uniform/gaussian in CPU and GPU.
 // Will use float data type whenever instantiated for half_t or any other non
 // standard real type.
@@ -81,7 +84,8 @@ private:
 };
 */
 
-
 #endif  // __CUDACC__
+//}
+//}
 
 #endif  // MXNET_RANDOM_GENERATOR_H_
