@@ -34,11 +34,11 @@ namespace op {
 template<typename xpu>
 struct SampleUniformKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lower, const IType *upper, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(lower[i/nBatch] + (upper[i/nBatch] - lower[i/nBatch]) * gen->uniform(i));
+    out[i] = OType(lower[i/nBatch] + (upper[i/nBatch] - lower[i/nBatch]) * gen->uniform(sid));
   }
 };
 

@@ -481,17 +481,17 @@ struct Kernel<OP, cpu> {
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
       for (int i = 0; i < N; ++i) {
-        OP::Map(i, rnd, args...);
+        OP::Map(i, i, rnd, args...);
       }
     } else {
       #pragma omp parallel for num_threads(omp_threads)
       for (int i = 0; i < N; ++i) {
-        OP::Map(i, rnd, args...);
+        OP::Map(i, i, rnd, args...);
       }
     }
 #else
     for (int i = 0; i < N; ++i) {
-      OP::Map(i, rnd, args...);
+      OP::Map(i, i, rnd, args...);
     }
 #endif
   }
@@ -561,10 +561,10 @@ __global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args)
 
 template<typename OP, typename GType, typename ...Args>
 __global__ void mxnet_generic_kernel_rnd_test(int N, RandGenerator<gpu, GType> *rnd, Args... args) {
-  int i = (blockIdx.x * blockDim.x + threadIdx.x) * 128;
-  for (; i < N; i += CURAND_STATE_SIZE * 128) {
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  for (int i = id * 128; i < N; i += CURAND_STATE_SIZE * 128) {
     for (int j = 0; j < 128 && i + j < N; ++j) {
-      OP::Map(i + j, rnd, args...);
+      OP::Map(i + j, id, rnd, args...);
     }
   }
 }
