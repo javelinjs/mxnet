@@ -77,7 +77,6 @@ public:
   MSHADOW_FORCE_INLINE __device__ double normal(unsigned int i = 0) {
     return curand_normal_double(&(states_[i % CURAND_STATE_SIZE]));
   }
-private:
   curandState_t states_[CURAND_STATE_SIZE];
 };
 
