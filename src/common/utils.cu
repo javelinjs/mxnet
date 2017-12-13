@@ -49,7 +49,7 @@ __global__ void RandGeneratorInit(RandGenerator<gpu, float> *pgen, unsigned int 
 }
 
 void RndInit(RandGenerator<gpu, float> *pgen, int global_seed) {
-  RandGeneratorInit<<< 1, 1 >>>(pgen, global_seed);
+  RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
 }
 
 }  // namespace common
