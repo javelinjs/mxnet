@@ -43,14 +43,6 @@
 namespace mxnet {
 namespace resource {
 
-#ifdef MXNET_USE_CUDA
-__global__ void RandGeneratorInit(RandGenerator<gpu, float> *pgen, unsigned int seed) {
-  for (int i = 0; i < 64; ++i) {
-    curand_init(seed, 0, 0, &(pgen->states[i]));
-  }
-}
-#endif
-
 // internal structure for space allocator
 struct SpaceAllocator {
   // internal context
