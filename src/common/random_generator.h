@@ -66,13 +66,13 @@ class RandGenerator<gpu, double> {
 public:
   __device__ __host__ RandGenerator() {}
   MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
-    curand_init(seed_, subsequence, offset, states_);
+    //curand_init(seed_, subsequence, offset, states_);
   }
   MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
     return curand(&(states_[i % CURAND_STATE_SIZE]));
   }
   MSHADOW_FORCE_INLINE __device__ double uniform(unsigned int i = 0) {
-    return static_cast<double>(1.0) - curand_uniform_double(&(states_[i % CURAND_STATE_SIZE]);
+    return static_cast<double>(1.0) - curand_uniform_double(&(states_[i % CURAND_STATE_SIZE]));
   }
   MSHADOW_FORCE_INLINE __device__ double normal(unsigned int i = 0) {
     return curand_normal_double(&(states_[i % CURAND_STATE_SIZE]));
