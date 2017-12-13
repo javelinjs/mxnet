@@ -42,8 +42,8 @@
 namespace mxnet {
 namespace resource {
 
-template<typename xpu>
-extern void RndInit(RandGenerator<xpu> *pgen, int global_seed);
+template<typename xpu, typename DType>
+extern void RndInit(RandGenerator<xpu, DType> *pgen, int global_seed);
 
 // internal structure for space allocator
 struct SpaceAllocator {

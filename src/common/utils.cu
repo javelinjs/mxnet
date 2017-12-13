@@ -32,11 +32,13 @@ __global__ void RandGeneratorInit(RandGenerator<gpu, float> *pgen, unsigned int 
   }
 }
 
-void RndInit(RandGenerator<gpu> *pgen, int global_seed) {
+template<typename DType>
+void RndInit(RandGenerator<gpu, DType> *pgen, int global_seed) {
   RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
 }
 
-void RndInit(RandGenerator<cpu> *pgen, int global_seed) {
+template<typename DType>
+void RndInit(RandGenerator<cpu, DType> *pgen, int global_seed) {
 }
 
 namespace mxnet {
