@@ -25,6 +25,9 @@
 #include "./utils.h"
 #include "../operator/tensor/cast_storage-inl.h"
 
+namespace mxnet {
+namespace common {
+
 template<typename DType>
 __global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int seed) {
   for (int i = 0; i < 64; ++i) {
@@ -32,22 +35,14 @@ __global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int 
   }
 }
 
-void RndInit(RandGenerator<gpu, float> *pgen, unsigned int global_seed) {
+template<typename DType>
+void RndInit(RandGenerator<gpu, DType> *pgen, unsigned int global_seed) {
   RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
 }
 
-void RndInit(RandGenerator<cpu, float> *pgen, unsigned int global_seed) {
+template<typename DType>
+void RndInit(RandGenerator<cpu, DType> *pgen, unsigned int global_seed) {
 }
-
-void RndInit(RandGenerator<gpu, double> *pgen, unsigned int global_seed) {
-  RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
-}
-
-void RndInit(RandGenerator<cpu, double> *pgen, unsigned int global_seed) {
-}
-
-namespace mxnet {
-namespace common {
 
 template<>
 void CheckFormatWrapper<gpu>(const RunContext &rctx, const NDArray &input,

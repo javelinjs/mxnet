@@ -47,12 +47,11 @@
 #include "../operator/mxnet_op.h"
 #include "./random_generator.h"
 
-template<typename xpu, typename DType>
-void RndInit(RandGenerator<xpu, DType> *pgen, unsigned int global_seed);
-
 namespace mxnet {
 namespace common {
 
+template<typename xpu, typename DType>
+void RndInit(RandGenerator<xpu, DType> *pgen, unsigned int global_seed);
 
 /*!
  * \brief IndPtr should be non-negative, in non-decreasing order, start with 0
