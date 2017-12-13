@@ -45,6 +45,10 @@
 #include <functional>
 
 #include "../operator/mxnet_op.h"
+#include "./random_generator.h"
+
+template<typename xpu, typename DType>
+void RndInit(RandGenerator<xpu, DType> *pgen, unsigned int global_seed);
 
 namespace mxnet {
 namespace common {

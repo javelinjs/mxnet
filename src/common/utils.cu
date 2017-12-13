@@ -24,7 +24,6 @@
 
 #include "./utils.h"
 #include "../operator/tensor/cast_storage-inl.h"
-#include "./random_generator.h"
 
 template<typename DType>
 __global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int seed) {

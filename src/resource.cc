@@ -38,9 +38,7 @@
 #endif  // MXNET_USE_CUDA
 #include "./common/random_generator.h"
 #include "./common/lazy_alloc_array.h"
-
-template<typename xpu, typename DType>
-extern void RndInit(RandGenerator<xpu, DType> *pgen, unsigned int global_seed);
+#include "./common/utils.h"
 
 namespace mxnet {
 namespace resource {
