@@ -203,7 +203,7 @@ struct PoissonSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    RandGenerator<xpu, OType> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
+    RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
     Kernel<SamplePoissonKernel<xpu>, xpu>
       ::LaunchRndNative(s, gen, out.size(0), lambda.size(0), out.size(0), lambda.dptr_, out.dptr_);
   }
