@@ -297,7 +297,6 @@ struct SampleMaster<xpu, NormalSampler<xpu>> {
                  const OpContext& ctx,
                  const OpReqType& req,
                  TBlob* outputs) {
-    fprintf(stderr, "In SampleMaster<NormalSampler>\n");
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const SampleNormalParam& param = nnvm::get<SampleNormalParam>(attrs.parsed);
     CHECK_GT(param.scale, 0) << "scale parameter in gaussian has to be positive";

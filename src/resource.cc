@@ -129,7 +129,6 @@ class ResourceManagerImpl : public ResourceManager {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
         case ResourceRequest::kSampler:
-          fprintf(stderr, "Request for sampler\n");
           return cpu_sampler_->resource;
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
@@ -273,7 +272,6 @@ class ResourceManagerImpl : public ResourceManager {
     Resource resource;
     /*! \brief constructor */
     explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
-      fprintf(stderr, "Constructor for ResourceSampler\n");
       mshadow::SetDevice<xpu>(ctx.dev_id);
       resource.var = Engine::Get()->NewVariable();
       if (ctx.dev_mask() == Context::kCPU) {
