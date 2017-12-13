@@ -31,6 +31,7 @@
 #include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
+#include "./common/random_generator.h"
 #include "./common/lazy_alloc_array.h"
 
 namespace mxnet {
@@ -94,14 +95,18 @@ class ResourceManagerImpl : public ResourceManager {
         Context::CPU(), global_seed_));
     cpu_space_.reset(new ResourceTempSpace(
         Context::CPU(), cpu_temp_space_copy_));
+    cpu_sampler_.reset(new ResourceSampler<cpu>(
+        Context::CPU(), global_seed_));
   }
   ~ResourceManagerImpl() {
     // need explicit delete, before engine get killed
     cpu_rand_.reset(nullptr);
     cpu_space_.reset(nullptr);
+    cpu_sampler_.reset(nullptr);
 #if MXNET_USE_CUDA
     gpu_rand_.Clear();
     gpu_space_.Clear();
+    // TODO: gpu_sampler_
 #endif
     if (engine_ref_ != nullptr) {
       engine_ref_ = nullptr;
@@ -117,6 +122,9 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
+        case ResourceRequest::kSampler:
+          fprintf(stderr, "Request for sampler\n");
+          return cpu_sampler_->resource;
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
@@ -146,6 +154,7 @@ class ResourceManagerImpl : public ResourceManager {
   void SeedRandom(uint32_t seed) override {
     global_seed_ = seed;
     cpu_rand_->Seed(global_seed_);
+    cpu_sampler_->Seed(global_seed_);
 #if MXNET_USE_CUDA
     gpu_rand_.ForEach([seed](size_t i, ResourceRandom<gpu> *p) {
         p->Seed(seed);
@@ -241,6 +250,67 @@ class ResourceManagerImpl : public ResourceManager {
       return resource[ptr % space.size()];
     }
   };
+
+  // the random sampler resources
+  template<typename xpu>
+  struct ResourceSampler {
+    /*! \brief the context of the PRNG */
+    Context ctx;
+    /*! \brief pointer to PRNG */
+    RandGenerator<xpu> *pgen;
+    /*! \brief resource representation */
+    Resource resource;
+    /*! \brief constructor */
+    explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
+      fprintf(stderr, "Constructor for ResourceSampler\n");
+      mshadow::SetDevice<xpu>(ctx.dev_id);
+      resource.var = Engine::Get()->NewVariable();
+      if (ctx.dev_mask() == Context::kCPU) {
+        pgen = new RandGenerator<xpu>(ctx.dev_id + global_seed * kRandMagic);
+      } else {
+        CHECK_EQ(ctx.dev_mask(), Context::kGPU);
+#if MSHADOW_USE_CUDA
+        CUDA_CALL(cudaMalloc(&pgen, sizeof(RandGenerator<xpu>)));
+#else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+      }
+      resource.ptr_ = pgen;
+      resource.req = ResourceRequest(ResourceRequest::kSampler);
+    }
+    ~ResourceSampler() {
+      RandGenerator<xpu> *r = pgen;
+      if (ctx.dev_mask() == Context::kCPU) {
+        Engine::Get()->DeleteVariable(
+        [r](RunContext rctx) {
+          MSHADOW_CATCH_ERROR(delete r);
+        }, ctx, resource.var);
+      } else {
+#if MSHADOW_USE_CUDA
+        CUDA_CALL(cudaFree(pgen));
+#else
+        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
+#endif
+      }
+    }
+    // set seed to a sampler
+    inline void Seed(uint32_t global_seed) {
+      uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
+      RandGenerator<xpu> *r = pgen;
+      Engine::Get()->PushAsync(
+      [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        if (rctx.get_ctx().dev_mask() == Context::kCPU) {
+          r->Seed(seed);
+        } else {
+          // TODO
+          LOG(FATAL) << "Seed for GPU.";
+        }
+        on_complete();
+      }, ctx, {}, {resource.var},
+      FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceSamplerSetSeed"));
+    }
+  };
+
   /*! \brief number of copies in CPU temp space */
   int cpu_temp_space_copy_;
   /*! \brief number of copies in GPU temp space */
@@ -255,11 +325,15 @@ class ResourceManagerImpl : public ResourceManager {
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
   std::unique_ptr<ResourceTempSpace> cpu_space_;
+  /*! \brief CPU random sampler resources */
+  std::unique_ptr<ResourceSampler<cpu> > cpu_sampler_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;
   /*! \brief temp space for GPU */
   common::LazyAllocArray<ResourceTempSpace> gpu_space_;
+  /*! \brief TODO */
+  common::LazyAllocArray<ResourceSampler<gpu> > gpu_sampler_;
 #endif
 };
 }  // namespace resource

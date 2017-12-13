@@ -26,6 +26,7 @@
 #define MXNET_RESOURCE_H_
 
 #include <dmlc/logging.h>
+#include "../../src/common/random_generator.h"
 #include "./base.h"
 #include "./engine.h"
 
@@ -40,7 +41,9 @@ struct ResourceRequest {
     /*! \brief mshadow::Random<xpu> object */
     kRandom,
     /*! \brief A dynamic temp space that can be arbitrary size */
-    kTempSpace
+    kTempSpace,
+    /*! \brief TODO */
+    kSampler
   };
   /*! \brief type of resources */
   Type type;
@@ -89,6 +92,14 @@ struct Resource {
     ret->set_stream(stream);
     return ret;
   }
+
+  template<typename xpu, typename DType>
+  inline RandGenerator<xpu, DType>* get_sampler() const {
+    CHECK_EQ(req.type, ResourceRequest::kSampler);
+    RandGenerator<xpu, DType> *ret = static_cast<RandGenerator<xpu, DType>*>(ptr_);
+    return ret;
+  }
+
   /*!
    * \brief Get space requested as mshadow Tensor.
    *  The caller can request arbitrary size.

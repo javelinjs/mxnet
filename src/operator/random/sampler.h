@@ -48,15 +48,15 @@ struct UniformSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lower,
                                    const Tensor<xpu, 1, IType>& upper,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     /*
     Kernel<SampleUniformKernel<xpu>, xpu>
       ::template LaunchRnd<OType>(s, 100, out.size(0), lower.size(0), out.size(0),
                          lower.dptr_, upper.dptr_, out.dptr_);
                          */
-    RandGenerator<xpu, OType> gen(100);
     Kernel<SampleUniformKernel<xpu>, xpu>
-      ::template LaunchRndTest<OType>(s, &gen, out.size(0), lower.size(0), out.size(0),
+      ::template Launch(s, out.size(0), pgen, lower.size(0), out.size(0),
                                 lower.dptr_, upper.dptr_, out.dptr_);
   }
 };
@@ -78,6 +78,7 @@ struct NormalSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& mean,
                                    const Tensor<xpu, 1, IType>& std,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleNormalKernel<xpu>, xpu>
       ::template LaunchRnd<OType>(s, 100, out.size(0), mean.size(0), out.size(0),
@@ -101,6 +102,7 @@ struct ExponentialSampler {
   template<typename IType, typename OType>
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lambda,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleExponentialKernel<xpu>, xpu>
       ::template LaunchRnd<OType>(s, 100, out.size(0), lambda.size(0), out.size(0), lambda.dptr_, out.dptr_);
@@ -145,6 +147,7 @@ struct GammaSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& alpha,
                                    const Tensor<xpu, 1, IType>& beta,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     typedef typename std::conditional<std::is_floating_point<OType>::value,
                                       OType, float>::type FType;
@@ -201,6 +204,7 @@ struct PoissonSampler {
   template<typename IType, typename OType>
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lambda,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SamplePoissonKernel<xpu>, xpu>
       ::template LaunchRnd<float>(s, 100, out.size(0), lambda.size(0), out.size(0), lambda.dptr_, out.dptr_);
@@ -228,6 +232,7 @@ struct NegativeBinomialSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& k,
                                    const Tensor<xpu, 1, IType>& p,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleNegativeBinomialKernel<xpu>, xpu>
       ::template LaunchRnd<float>(s, 100, out.size(0), k.size(0), out.size(0), k.dptr_, p.dptr_, out.dptr_);
@@ -253,6 +258,7 @@ struct GeneralizedNegativeBinomialSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& mu,
                                    const Tensor<xpu, 1, IType>& alpha,
                                    const Tensor<xpu, 1, OType>& out,
+                                   RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleGeneralizedNegativeBinomialKernel<xpu>, xpu>
       ::template LaunchRnd<float>(s, 100, out.size(0), mu.size(0), out.size(0),

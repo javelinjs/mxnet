@@ -142,11 +142,12 @@ template<typename xpu, typename IType, typename OType, typename Sampler>
 struct SamplerCaller<xpu, IType, OType, Sampler, 1> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
+                 RandGenerator<xpu, OType> *pgen,
                  mshadow::Stream<xpu> *s) {
     Sampler sampler;
     sampler.Sample(inputs[0].FlatTo1D<xpu, IType>(s),
                    outputs[0].FlatTo1D<xpu, OType>(s),
-                   s);
+                   pgen, s);
   }
 };
 
@@ -154,12 +155,13 @@ template<typename xpu, typename IType, typename OType, typename Sampler>
 struct SamplerCaller<xpu, IType, OType, Sampler, 2> {
   static void op(const std::vector<TBlob>& inputs,
                  const std::vector<TBlob>& outputs,
+                 RandGenerator<xpu, OType> *pgen,
                  mshadow::Stream<xpu> *s) {
     Sampler sampler;
     sampler.Sample(inputs[0].FlatTo1D<xpu, IType>(s),
                    inputs[1].FlatTo1D<xpu, IType>(s),
                    outputs[0].FlatTo1D<xpu, OType>(s),
-                   s);
+                   pgen, s);
   }
 };
 
@@ -177,8 +179,9 @@ void MultiSampleOpForward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, IType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
+      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
         SamplerCaller<xpu, IType, OType, Sampler, inum>
-            ::op(inputs, outputs, s);
+            ::op(inputs, outputs, pgen, s);
     });
   });
 }
