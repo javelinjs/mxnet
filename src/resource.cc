@@ -42,7 +42,7 @@
 namespace mxnet {
 namespace resource {
 
-// extern void RndInit(RandGenerator<gpu, float> *pgen, int global_seed);
+extern void RndInit(RandGenerator<gpu, float> *pgen, int global_seed);
 
 // internal structure for space allocator
 struct SpaceAllocator {
@@ -283,7 +283,7 @@ class ResourceManagerImpl : public ResourceManager {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MSHADOW_USE_CUDA
         CUDA_CALL(cudaMalloc(&pgen, sizeof(RandGenerator<gpu>)));
-        // mxnet::common::RndInit(ppgen, global_seed);
+        RndInit(pgen, ctx.dev_id + global_seed * kRandMagic);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
