@@ -299,7 +299,10 @@ class ResourceManagerImpl : public ResourceManager {
         }, ctx, resource.var);
       } else {
 #if MSHADOW_USE_CUDA
-        CUDA_CALL(cudaFree(pgen));
+        Engine::Get()->DeleteVariable(
+        [r](RunContext rctx) {
+          cudaFree(r);
+        }, ctx, resource.var);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif

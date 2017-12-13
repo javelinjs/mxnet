@@ -452,30 +452,7 @@ struct Kernel<OP, cpu> {
   }
 
   template<typename GType, typename ...Args>
-  inline static void LaunchRnd(mshadow::Stream<cpu> *s,
-                               unsigned int seed, const int N, Args... args) {
-    RandGenerator<cpu, GType> rnd(seed);
-#ifdef _OPENMP
-    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    if (omp_threads < 2) {
-      for (int i = 0; i < N; ++i) {
-        OP::Map(i, &rnd, args...);
-      }
-    } else {
-      #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < N; ++i) {
-        OP::Map(i, &rnd, args...);
-      }
-    }
-#else
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, &rnd, args...);
-    }
-#endif
-  }
-
-  template<typename GType, typename ...Args>
-  inline static void LaunchRndTest(mshadow::Stream<cpu> *s,
+  inline static void LaunchRndNative(mshadow::Stream<cpu> *s,
                                RandGenerator<cpu, GType> *rnd, const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
@@ -533,8 +510,6 @@ struct Kernel<OP, cpu> {
   }
 };
 
-
-
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
 __global__ void mxnet_generic_kernel(int N, Args... args) {
@@ -551,16 +526,7 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 }
 
 template<typename OP, typename GType, typename ...Args>
-__global__ void mxnet_generic_kernel_rnd(int N, unsigned int seed, Args... args) {
-  int i = blockIdx.x * blockDim.x + threadIdx.x;
-  // RandGenerator<gpu, float> rnd();
-  for (; i < N; i += blockDim.x * gridDim.x) {
-    // OP::Map(i, &rnd, args...);
-  }
-}
-
-template<typename OP, typename GType, typename ...Args>
-__global__ void mxnet_generic_kernel_rnd_test(int N, RandGenerator<gpu, GType> *rnd, Args... args) {
+__global__ void mxnet_generic_kernel_rnd_native(RandGenerator<gpu, GType> *rnd, int N, Args... args) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   for (int i = id * 128; i < N; i += CURAND_STATE_SIZE * 128) {
     for (int j = 0; j < 128 && i + j < N; ++j) {
@@ -591,22 +557,12 @@ struct Kernel<OP, gpu> {
   }
 
   template<typename GType, typename ...Args>
-  inline static void LaunchRnd(mshadow::Stream<gpu> *s, unsigned int seed,
-                               const int N, Args... args) {
+  inline static void LaunchRndNative(mshadow::Stream<gpu> *s,
+                                     RandGenerator<gpu, GType> *rnd,
+                                     const int N, Args... args) {
     using namespace mshadow::cuda;
-    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
-    mxnet_generic_kernel_rnd<OP, GType, Args...>
-      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-        N, seed, args...);
-  }
-
-  template<typename GType, typename ...Args>
-  inline static void LaunchRndTest(mshadow::Stream<gpu> *s, RandGenerator<gpu, GType> *rnd,
-                               const int N, Args... args) {
-    using namespace mshadow::cuda;
-    mxnet_generic_kernel_rnd_test<OP, GType, Args...>
-    <<<1, CURAND_STATE_SIZE, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-    N, rnd, args...);
+    mxnet_generic_kernel_rnd_native<OP, GType, Args...>
+    <<<1, CURAND_STATE_SIZE, 0, mshadow::Stream<gpu>::GetStream(s)>>>(rnd, N, args...);
   }
 };
 #endif  // __CUDACC__
