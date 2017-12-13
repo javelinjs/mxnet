@@ -31,7 +31,7 @@ namespace common {
 template<typename DType>
 __global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int seed) {
   for (int i = 0; i < 64; ++i) {
-    curand_init(seed, 0, 0, &(pgen->states_[i]));
+    curand_init(seed, i, 0, &(pgen->states_[i]));
   }
 }
 
