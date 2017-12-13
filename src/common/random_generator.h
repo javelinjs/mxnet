@@ -18,10 +18,10 @@ using namespace mshadow;
 // Elementary random number generation for int/uniform/gaussian in CPU and GPU.
 // Will use float data type whenever instantiated for half_t or any other non
 // standard real type.
-template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
-class RandGenerator;
+//template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
+//class RandGenerator;
 
-template<typename DType>
+template<typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator<cpu, DType> {
 public:
   typedef typename std::conditional<std::is_floating_point<DType>::value,
