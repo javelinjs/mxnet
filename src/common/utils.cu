@@ -35,8 +35,13 @@ __global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int 
   }
 }
 
-template<typename DType>
-void RndInit<gpu>(RandGenerator<gpu, DType> *pgen, unsigned int global_seed) {
+template<>
+void RndInit<gpu, float>(RandGenerator<gpu, float> *pgen, unsigned int global_seed) {
+  RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
+}
+
+template<>
+void RndInit<gpu, double>(RandGenerator<gpu, double> *pgen, unsigned int global_seed) {
   RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
 }
 
