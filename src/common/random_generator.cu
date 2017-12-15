@@ -31,29 +31,23 @@
 namespace mxnet {
 namespace common {
 
-__global__ void rand_generator_seed_kernel(RandGenerator<gpu, float> *pgen, unsigned int seed) {
+template<typename DType>
+__global__ void rand_generator_seed_kernel(RandGenerator<gpu, DType> *pgen, unsigned int seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   pgen->Seed(seed, id);
 }
 
-template<>
-void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, unsigned int seed) {
+template<typename DType>
+void RandGeneratorSeed<gpu, DType>(RandGenerator<gpu, DType> *gen, unsigned int seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
 }
 
-template<>
-RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
-  RandGenerator<gpu, float> *gen;
-  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, float>)));
-  return gen;
-};
-
-template<>
-RandGenerator<gpu, double> *NewRandGenerator<gpu, double>() {
-  RandGenerator<gpu, double> *gen;
-  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, double>)));
+template<typename DType>
+RandGenerator<gpu, DType> *NewRandGenerator<gpu, DType>() {
+  RandGenerator<gpu, DType> *gen;
+  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, DType>)));
   return gen;
 };
 

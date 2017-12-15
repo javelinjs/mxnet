@@ -3,24 +3,14 @@
 namespace mxnet {
 namespace common {
 
-template<>
-void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
+template<typename DType>
+void RandGeneratorSeed<cpu, DType>(RandGenerator<cpu, DType> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
-template<>
-RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
-  return new RandGenerator<cpu, float>();
-}
-
-template<>
-void RandGeneratorSeed<cpu, double>(RandGenerator<cpu, double> *gen, unsigned int seed) {
-  gen->Seed(seed, 0);
-}
-
-template<>
-RandGenerator<cpu, double> *NewRandGenerator<cpu, double>() {
-  return new RandGenerator<cpu, double>();
+template<typename DType>
+RandGenerator<cpu, DType> *NewRandGenerator<cpu, DType>() {
+  return new RandGenerator<cpu, DType>();
 }
 
 }  // namespace common
