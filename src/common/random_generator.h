@@ -113,12 +113,12 @@ private:
 #endif  // MXNET_USE_CUDA
 
 template<>
-inline void RandGeneratorSeed(RandGenerator<cpu, float> *gen, unsigned int seed) {
+inline void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
 template<>
-inline RandGenerator<cpu, float> *NewRandGenerator() {
+inline RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
   return new RandGenerator<cpu>();
 }
 
