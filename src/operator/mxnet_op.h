@@ -395,7 +395,7 @@ struct Kernel<OP, cpu> {
 
   // FIXME: no need
   template<typename ...Args>
-  inline static bool LaunchDefaultStream(mshadow::Stream<cpu> *, const int N, Args... args) {
+  inline static bool LaunchDefaultStream(const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
