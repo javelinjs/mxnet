@@ -44,7 +44,7 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
 template<typename xpu>
-inline void RandGeneratorSeed(RandGenerator<cpu> *, unsigned int seed);
+inline void RandGeneratorSeed(RandGenerator<xpu> *, unsigned int seed);
 
 template<typename DType>
 class RandGenerator<cpu, DType> {

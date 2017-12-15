@@ -269,20 +269,18 @@ class ResourceManagerImpl : public ResourceManager {
     explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
       mshadow::SetDevice<xpu>(ctx.dev_id);
       resource.var = Engine::Get()->NewVariable();
-      const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
       if (ctx.dev_mask() == Context::kCPU) {
         pgen = new common::RandGenerator<xpu>();
-        pgen->Seed(seed, 0);
       } else {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MXNET_USE_CUDA
         CUDA_CALL(cudaMalloc(&pgen, sizeof(common::RandGenerator<gpu>)));
-        mxnet::op::mxnet_op::Kernel<common::RandGeneratorSeed<xpu>, xpu>
-          ::LaunchDefaultStream(CURAND_STATE_SIZE, seed, reinterpret_cast<common::RandGenerator<xpu, float> *>(pgen));
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
       }
+      const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
+      common::RandGeneratorSeed(pgen, seed);
       resource.ptr_ = pgen;
       resource.req = ResourceRequest(ResourceRequest::kSampler);
     }
