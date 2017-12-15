@@ -25,8 +25,8 @@
 
 #include <algorithm>
 #include <mshadow/cuda/tensor_gpu-inl.cuh>
-#include "./cuda_utils.h"
 #include "./random_generator.h"
+#include "./cuda_utils.h"
 
 namespace mxnet {
 namespace common {
@@ -38,6 +38,7 @@ __global__ void rand_generator_seed_kernel(RandGenerator<gpu> *pgen, unsigned in
 
 template<>
 inline void RandGeneratorSeed(RandGenerator<gpu> *gen, unsigned int seed) {
+  using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
 }
