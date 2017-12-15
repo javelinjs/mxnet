@@ -29,18 +29,18 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-template<typename DType>
-void RandGeneratorSeed(RandGenerator<cpu, DType> *gen, unsigned int seed) {
+template<>
+void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
-template<typename DType>
-RandGenerator<cpu, DType> *NewRandGenerator() {
-  return new RandGenerator<cpu, DType>();
+template<>
+RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
+  return new RandGenerator<cpu, float>();
 }
 
-template<typename DType>
-void DeleteRandGenerator(RandGenerator<cpu, DType> *p) {
+template<>
+void DeleteRandGenerator<cpu, float>(RandGenerator<cpu, float> *p) {
   if (p) delete p;
 }
 
