@@ -30,17 +30,17 @@ namespace common {
 namespace random {
 
 template<>
-inline void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
+void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
 template<>
-inline RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
+RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
   return new RandGenerator<cpu, float>();
 }
 
 template<>
-inline void DeleteRandGenerator(RandGenerator<cpu, float> *p) {
+void DeleteRandGenerator(RandGenerator<cpu, float> *p) {
   if (p) delete p;
 }
 

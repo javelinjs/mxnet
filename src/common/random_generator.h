@@ -45,13 +45,13 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-inline void RandGeneratorSeed(RandGenerator<xpu, DType> *, unsigned int seed);
+void RandGeneratorSeed(RandGenerator<xpu, DType> *, unsigned int seed);
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-inline RandGenerator<xpu, DType> *NewRandGenerator();
+RandGenerator<xpu, DType> *NewRandGenerator();
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-inline void DeleteRandGenerator(RandGenerator<xpu, DType> *);
+void DeleteRandGenerator(RandGenerator<xpu, DType> *);
 
 template<typename DType>
 class RandGenerator<cpu, DType> {
