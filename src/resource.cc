@@ -291,12 +291,7 @@ class ResourceManagerImpl : public ResourceManager {
       common::random::RandGenerator<xpu> *r = pgen;
       Engine::Get()->PushAsync(
       [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-        if (rctx.get_ctx().dev_mask() == Context::kCPU) {
-          r->Seed(seed, 0);
-        } else {
-          // TODO
-          LOG(FATAL) << "Seed for GPU.";
-        }
+        common::random::RandGeneratorSeed(r, seed);
         on_complete();
       }, ctx, {}, {resource.var},
       FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceSamplerSetSeed"));

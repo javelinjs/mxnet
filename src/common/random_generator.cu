@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file random_generator.cu
- * \brief gpu functions for random number generator.
+ * \brief gpu util functions for random number generator.
  */
 
 #include <algorithm>
@@ -38,22 +38,22 @@ __global__ void rand_generator_seed_kernel(RandGenerator<gpu, DType> *pgen, unsi
   pgen->Seed(seed, id);
 }
 
-template<>
-void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, unsigned int seed) {
+template<typename DType>
+void RandGeneratorSeed<gpu, DType>(RandGenerator<gpu, DType> *gen, unsigned int seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
 }
 
-template<>
-RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
-  RandGenerator<gpu, float> *gen;
-  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, float>)));
+template<typename DType>
+RandGenerator<gpu, DType> *NewRandGenerator<gpu, DType>() {
+  RandGenerator<gpu, DType> *gen;
+  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, DType>)));
   return gen;
 };
 
-template<>
-void DeleteRandGenerator(RandGenerator<gpu, float> *p) {
+template<typename DType>
+void DeleteRandGenerator(RandGenerator<gpu, DType> *p) {
   if (p) cudaFree(p);
 }
 

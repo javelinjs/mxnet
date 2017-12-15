@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file random_generator.cc
- * \brief cpu functions for random number generator.
+ * \brief cpu util functions for random number generator.
  */
 
 #include "./random_generator.h"
@@ -29,18 +29,18 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-template<>
-void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
+template<typename DType>
+void RandGeneratorSeed<cpu, DType>(RandGenerator<cpu, DType> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
-template<>
-RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
-  return new RandGenerator<cpu, float>();
+template<typename DType>
+RandGenerator<cpu, DType> *NewRandGenerator<cpu, DType>() {
+  return new RandGenerator<cpu, DType>();
 }
 
-template<>
-void DeleteRandGenerator(RandGenerator<cpu, float> *p) {
+template<typename DType>
+void DeleteRandGenerator(RandGenerator<cpu, DType> *p) {
   if (p) delete p;
 }
 
