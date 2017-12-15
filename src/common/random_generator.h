@@ -29,7 +29,6 @@
 #include <random>
 
 #if MXNET_USE_CUDA
-#include "./cuda_utils.h"
 #include <curand_kernel.h>
 #endif  // MXNET_USE_CUDA
 
@@ -45,7 +44,7 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
 template<typename xpu>
-struct RandGeneratorSeed;
+inline void RandGeneratorSeed(RandGenerator<cpu> *, unsigned int seed);
 
 template<typename DType>
 class RandGenerator<cpu, DType> {
@@ -110,24 +109,9 @@ public:
 #endif  // MXNET_USE_CUDA
 
 template<>
-struct RandGeneratorSeed<cpu> {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
-                                  unsigned int seed,
-                                  RandGenerator<cpu, DType> *gen) {
-    gen->Seed(seed, i);
-  }
-};
-
-template<>
-struct RandGeneratorSeed<gpu> {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
-                                  unsigned int seed,
-                                  RandGenerator<gpu, DType> *gen) {
-    gen->Seed(seed, i);
-  }
-};
+inline void RandGeneratorSeed(RandGenerator<cpu> *gen, unsigned int seed) {
+  gen->Seed(seed, 0);
+}
 
 }  // namespace common
 }  // namespace mxnet

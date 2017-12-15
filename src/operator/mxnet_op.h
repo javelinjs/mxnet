@@ -37,8 +37,6 @@
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
-#include <curand.h>
-#include <curand_kernel.h>
 #endif  // __CUDACC__
 
 namespace mxnet {
