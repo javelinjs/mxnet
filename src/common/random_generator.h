@@ -116,7 +116,6 @@ struct RandGeneratorSeed {
   }
 };
 
-
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_RANDOM_GENERATOR_H_
