@@ -44,8 +44,8 @@ namespace common {
 template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
-template<typename xpu, typename DType>
 struct RandGeneratorSeed {
+  template<typename xpu, typename DType>
   MSHADOW_XINLINE static void Map(int i,
                                   unsigned int seed,
                                   RandGenerator<xpu, DType> *gen) {
