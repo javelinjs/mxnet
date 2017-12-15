@@ -31,13 +31,8 @@
 #include <mxnet/storage.h>
 #include <limits>
 #include <atomic>
-#ifdef MXNET_USE_CUDA
-#include "./common/cuda_utils.h"
-#include <curand.h>
-#include <curand_kernel.h>
-#endif  // MXNET_USE_CUDA
-#include "./common/random_generator.h"
 #include "./common/lazy_alloc_array.h"
+#include "./common/random_generator.h"
 #include "./common/utils.h"
 
 namespace mxnet {
@@ -267,20 +262,23 @@ class ResourceManagerImpl : public ResourceManager {
     /*! \brief the context of the PRNG */
     Context ctx;
     /*! \brief pointer to PRNG */
-    RandGenerator<xpu> *pgen;
+    common::RandGenerator<xpu> *pgen;
     /*! \brief resource representation */
     Resource resource;
     /*! \brief constructor */
     explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
       mshadow::SetDevice<xpu>(ctx.dev_id);
       resource.var = Engine::Get()->NewVariable();
+      const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
       if (ctx.dev_mask() == Context::kCPU) {
-        pgen = new RandGenerator<xpu>(ctx.dev_id + global_seed * kRandMagic);
+        pgen = new common::RandGenerator<cpu>();
+        pgen->Seed(seed);
       } else {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
-#if MSHADOW_USE_CUDA
-        CUDA_CALL(cudaMalloc(&pgen, sizeof(RandGenerator<gpu>)));
-        common::RndInit(pgen, ctx.dev_id + global_seed * kRandMagic);
+#if MXNET_USE_CUDA
+        CUDA_CALL(cudaMalloc(&pgen, sizeof(common::RandGenerator<gpu>)));
+        mxnet::op::mxnet_op::Kernel<common::RandGeneratorSeed<gpu>, gpu>
+          ::LaunchDefaultStream(CURAND_STATE_SIZE, seed, pgen);
 #else
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
@@ -289,7 +287,7 @@ class ResourceManagerImpl : public ResourceManager {
       resource.req = ResourceRequest(ResourceRequest::kSampler);
     }
     ~ResourceSampler() {
-      RandGenerator<xpu> *r = pgen;
+      common::RandGenerator<xpu> *r = pgen;
       if (ctx.dev_mask() == Context::kCPU) {
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
@@ -309,7 +307,7 @@ class ResourceManagerImpl : public ResourceManager {
     // set seed to a sampler
     inline void Seed(uint32_t global_seed) {
       uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
-      RandGenerator<xpu> *r = pgen;
+      common::RandGenerator<xpu> *r = pgen;
       Engine::Get()->PushAsync(
       [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         if (rctx.get_ctx().dev_mask() == Context::kCPU) {

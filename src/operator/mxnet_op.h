@@ -453,7 +453,8 @@ struct Kernel<OP, cpu> {
 
   template<typename GType, typename ...Args>
   inline static void LaunchRndNative(mshadow::Stream<cpu> *s,
-                               RandGenerator<cpu, GType> *rnd, const int N, Args... args) {
+                                     common::RandGenerator<cpu, GType> *rnd,
+                                     const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
@@ -556,9 +557,17 @@ struct Kernel<OP, gpu> {
         N, args...);
   }
 
+  template<typename ...Args>
+  inline static void LaunchDefaultStream(int N, Args... args) {
+    using namespace mshadow::cuda;
+    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
+    mxnet_generic_kernel<OP, Args...>
+      <<<ngrid, kBaseThreadNum, 0, 0>>>(N, args...);
+  }
+
   template<typename GType, typename ...Args>
   inline static void LaunchRndNative(mshadow::Stream<gpu> *s,
-                                     RandGenerator<gpu, GType> *rnd,
+                                     common::RandGenerator<gpu, GType> *rnd,
                                      const int N, Args... args) {
     using namespace mshadow::cuda;
     mxnet_generic_kernel_rnd_native<OP, GType, Args...>

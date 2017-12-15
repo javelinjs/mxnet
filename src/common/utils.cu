@@ -28,23 +28,6 @@
 namespace mxnet {
 namespace common {
 
-template<typename DType>
-__global__ void RandGeneratorInit(RandGenerator<gpu, DType> *pgen, unsigned int seed) {
-  for (int i = 0; i < 64; ++i) {
-    curand_init(seed, i, 0, &(pgen->states_[i]));
-  }
-}
-
-template<>
-void RndInit<gpu, float>(RandGenerator<gpu, float> *pgen, unsigned int global_seed) {
-  RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
-}
-
-template<>
-void RndInit<gpu, double>(RandGenerator<gpu, double> *pgen, unsigned int global_seed) {
-  RandGeneratorInit<<<1, 1>>>(pgen, global_seed);
-}
-
 template<>
 void CheckFormatWrapper<gpu>(const RunContext &rctx, const NDArray &input,
                              const TBlob &err_cpu,  const bool full_check) {

@@ -29,11 +29,6 @@ namespace mxnet {
 namespace common {
 
 template<>
-void RndInit<cpu, float>(RandGenerator<cpu, float> *pgen, unsigned int global_seed) { }
-template<>
-void RndInit<cpu, double>(RandGenerator<cpu, double> *pgen, unsigned int global_seed) { }
-
-template<>
 void CheckFormatWrapper<cpu>(const RunContext &rctx, const NDArray &input,
                              const TBlob &err_cpu, const bool full_check) {
   CheckFormatImpl<cpu>(rctx, input, err_cpu, full_check);

@@ -34,7 +34,7 @@ namespace op {
 template<typename xpu>
 struct SampleUniformKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lower, const IType *upper, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -48,7 +48,7 @@ struct UniformSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lower,
                                    const Tensor<xpu, 1, IType>& upper,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleUniformKernel<xpu>, xpu>
       ::LaunchRndNative(s, pgen, out.size(0), lower.size(0), out.size(0),
@@ -59,7 +59,7 @@ struct UniformSampler {
 template<typename xpu>
 struct SampleNormalKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *mean, const IType *std, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -73,7 +73,7 @@ struct NormalSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& mean,
                                    const Tensor<xpu, 1, IType>& std,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleNormalKernel<xpu>, xpu>
       ::LaunchRndNative(s, pgen, out.size(0), mean.size(0), out.size(0),
@@ -84,7 +84,7 @@ struct NormalSampler {
 template<typename xpu>
 struct SampleExponentialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lambda, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -97,7 +97,7 @@ struct ExponentialSampler {
   template<typename IType, typename OType>
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lambda,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleExponentialKernel<xpu>, xpu>
       ::LaunchRndNative(s, pgen, out.size(0), lambda.size(0), out.size(0),
@@ -106,7 +106,7 @@ struct ExponentialSampler {
 };
 
 template<typename xpu, typename IType, typename OType>
-MSHADOW_XINLINE OType SampleGamma(IType a, IType b, int sid, RandGenerator<xpu, OType> *gen) {
+MSHADOW_XINLINE OType SampleGamma(IType a, IType b, int sid, common::RandGenerator<xpu, OType> *gen) {
   // Generate one sample of the gamma distribution
   OType sample;
   OType d = a < 1 ? a + 2.0 / 3.0 : a - 1.0 / 3.0;
@@ -129,7 +129,7 @@ MSHADOW_XINLINE OType SampleGamma(IType a, IType b, int sid, RandGenerator<xpu, 
 template<typename xpu>
 struct SampleGammaKernel {
   template<typename IType, typename OType, typename FType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, FType> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, FType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *alpha, const IType *beta, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -143,11 +143,11 @@ struct GammaSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& alpha,
                                    const Tensor<xpu, 1, IType>& beta,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     typedef typename std::conditional<std::is_floating_point<OType>::value,
                                       OType, float>::type FType;
-    RandGenerator<xpu, FType> *gen = reinterpret_cast<RandGenerator<xpu, FType> *>(pgen);
+    common::RandGenerator<xpu, FType> *gen = reinterpret_cast<common::RandGenerator<xpu, FType> *>(pgen);
     Kernel<SampleGammaKernel<xpu>, xpu>
       ::LaunchRndNative(s, gen, out.size(0), alpha.size(0), out.size(0),
                         alpha.dptr_, beta.dptr_, out.dptr_);
@@ -155,7 +155,7 @@ struct GammaSampler {
 };
 
 template<typename xpu>
-MSHADOW_XINLINE int SamplePoisson(float lambda, int sid, RandGenerator<xpu, float> *gen) {
+MSHADOW_XINLINE int SamplePoisson(float lambda, int sid, common::RandGenerator<xpu, float> *gen) {
   // Generate one sample of the poisson distribution. Intentionally written
   // towards a specific type (float) for internal computation which is sufficient
   // for accurate enough computation.
@@ -188,7 +188,7 @@ MSHADOW_XINLINE int SamplePoisson(float lambda, int sid, RandGenerator<xpu, floa
 template<typename xpu>
 struct SamplePoissonKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, float> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, float> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lambda, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -201,9 +201,9 @@ struct PoissonSampler {
   template<typename IType, typename OType>
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& lambda,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
+    common::RandGenerator<xpu, float> *gen = reinterpret_cast<common::RandGenerator<xpu, float> *>(pgen);
     Kernel<SamplePoissonKernel<xpu>, xpu>
       ::LaunchRndNative(s, gen, out.size(0), lambda.size(0), out.size(0), lambda.dptr_, out.dptr_);
   }
@@ -212,7 +212,7 @@ struct PoissonSampler {
 template<typename xpu>
 struct SampleNegativeBinomialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, float> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, float> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *k, const IType *p, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -230,9 +230,9 @@ struct NegativeBinomialSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& k,
                                    const Tensor<xpu, 1, IType>& p,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
+    common::RandGenerator<xpu, float> *gen = reinterpret_cast<common::RandGenerator<xpu, float> *>(pgen);
     Kernel<SampleNegativeBinomialKernel<xpu>, xpu>
       ::LaunchRndNative(s, gen, out.size(0), k.size(0), out.size(0), k.dptr_, p.dptr_, out.dptr_);
   }
@@ -241,7 +241,7 @@ struct NegativeBinomialSampler {
 template<typename xpu>
 struct SampleGeneralizedNegativeBinomialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, float> *gen,
+  MSHADOW_XINLINE static void Map(int i, int sid, common::RandGenerator<xpu, float> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *mu, const IType *alpha, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
@@ -257,9 +257,9 @@ struct GeneralizedNegativeBinomialSampler {
   MSHADOW_FORCE_INLINE void Sample(const Tensor<xpu, 1, IType>& mu,
                                    const Tensor<xpu, 1, IType>& alpha,
                                    const Tensor<xpu, 1, OType>& out,
-                                   RandGenerator<xpu, OType> *pgen,
+                                   common::RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
+    common::RandGenerator<xpu, float> *gen = reinterpret_cast<common::RandGenerator<xpu, float> *>(pgen);
     Kernel<SampleGeneralizedNegativeBinomialKernel<xpu>, xpu>
       ::LaunchRndNative(s, gen, out.size(0), mu.size(0), out.size(0),
                         mu.dptr_, alpha.dptr_, out.dptr_);

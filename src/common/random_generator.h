@@ -1,19 +1,42 @@
-#ifndef MXNET_RANDOM_GENERATOR_H_
-#define MXNET_RANDOM_GENERATOR_H_
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+/*!
+ * Copyright (c) 2017 by Contributors
+ * \file random_generator.h
+ * \brief Native random number generator.
+ */
+#ifndef MXNET_COMMON_RANDOM_GENERATOR_H_
+#define MXNET_COMMON_RANDOM_GENERATOR_H_
 
 #include <mxnet/base.h>
 #include <random>
 
-//#ifdef __CUDACC__
+#if MXNET_USE_CUDA
 #include "./cuda_utils.h"
-#include <curand.h>
 #include <curand_kernel.h>
-//#endif  // __CUDACC__
+#endif  // MXNET_USE_CUDA
 
 using namespace mshadow;
 
-//namespace mxnet {
-//namespace common {
+namespace mxnet {
+namespace common {
 
 // Elementary random number generation for int/uniform/gaussian in CPU and GPU.
 // Will use float data type whenever instantiated for half_t or any other non
@@ -21,22 +44,32 @@ using namespace mshadow;
 template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
+template<typename xpu>
+struct RandGeneratorSeed {
+  MSHADOW_XINLINE static void Map(int i,
+                                  unsigned int seed,
+                                  RandGenerator<xpu> *gen) {
+    gen->Seed(seed, i);
+  }
+};
+
 template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
   typedef typename std::conditional<std::is_floating_point<DType>::value,
-  DType, float>::type FType;
-  std::mt19937 engine;
-  std::uniform_real_distribution<FType> uniformNum;
-  std::normal_distribution<FType> normalNum;
-  explicit RandGenerator(unsigned int seed): engine(seed) {}
-  MSHADOW_XINLINE void Seed(unsigned int seed) { engine.seed(seed); }
+                                    DType, float>::type FType;
+  explicit RandGenerator() {}
+  MSHADOW_XINLINE void Seed(unsigned int seed, unsigned int idx = 0) { engine.seed(seed); }
   MSHADOW_XINLINE int rand(unsigned int i = 0) { return engine(); }
   MSHADOW_XINLINE FType uniform(unsigned int i = 0) { return uniformNum(engine); }
   MSHADOW_XINLINE FType normal(unsigned int i = 0) { return normalNum(engine); }
+private:
+  std::mt19937 engine;
+  std::uniform_real_distribution<FType> uniformNum;
+  std::normal_distribution<FType> normalNum;
 };
 
-
+#ifdef MXNET_USE_CUDA
 #define CURAND_STATE_SIZE 64
 
 // uniform number generation in Cuda made consistent with stl (include 0 but exclude 1)
@@ -45,9 +78,9 @@ public:
 template<typename DType>
 class RandGenerator<gpu, DType> {
 public:
-  __device__ __host__ RandGenerator(unsigned int seed) {}
-  MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
-    // curand_init(seed_, subsequence, offset, states_);
+  __device__ __host__ explicit RandGenerator() {}
+  MSHADOW_FORCE_INLINE __device__ void Seed(unsigned int seed, unsigned int state_idx) {
+    if (state_idx < CURAND_STATE_SIZE) curand_init(seed, state_idx, 0, &(states_[state_idx]));
   }
   MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
     return curand(&(states_[i % CURAND_STATE_SIZE]));
@@ -58,15 +91,16 @@ public:
   MSHADOW_FORCE_INLINE __device__ float normal(unsigned int i = 0) {
     return curand_normal(&(states_[i % CURAND_STATE_SIZE]));
   }
+private:
   curandState_t states_[CURAND_STATE_SIZE];
 };
 
 template<>
 class RandGenerator<gpu, double> {
 public:
-  __device__ __host__ RandGenerator() {}
-  MSHADOW_FORCE_INLINE __device__ void init(unsigned int subsequence, unsigned int offset) {
-    //curand_init(seed_, subsequence, offset, states_);
+  __device__ __host__ explicit RandGenerator() {}
+  MSHADOW_FORCE_INLINE __device__ void Seed(unsigned int seed, unsigned int state_idx) {
+    if (state_idx < CURAND_STATE_SIZE) curand_init(seed, state_idx, 0, &(states_[state_idx]));
   }
   MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
     return curand(&(states_[i % CURAND_STATE_SIZE]));
@@ -79,9 +113,8 @@ public:
   }
   curandState_t states_[CURAND_STATE_SIZE];
 };
+#endif  // MXNET_USE_CUDA
 
-//#endif  // __CUDACC__
-//}
-//}
-
-#endif  // MXNET_RANDOM_GENERATOR_H_
+}  // namespace common
+}  // namespace mxnet
+#endif  // MXNET_COMMON_RANDOM_GENERATOR_H_
