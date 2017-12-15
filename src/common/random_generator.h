@@ -46,6 +46,9 @@ class RandGenerator;
 template<typename xpu>
 inline void RandGeneratorSeed(RandGenerator<xpu> *, unsigned int seed);
 
+template<typename xpu>
+inline RandGenerator<xpu> *NewRandGenerator();
+
 template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
@@ -104,6 +107,7 @@ public:
   MSHADOW_FORCE_INLINE __device__ double normal(unsigned int i = 0) {
     return curand_normal_double(&(states_[i % CURAND_STATE_SIZE]));
   }
+private:
   curandState_t states_[CURAND_STATE_SIZE];
 };
 #endif  // MXNET_USE_CUDA
@@ -111,6 +115,11 @@ public:
 template<>
 inline void RandGeneratorSeed(RandGenerator<cpu> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
+}
+
+template<>
+inline RandGenerator<cpu> *NewRandGenerator() {
+  return new RandGenerator<cpu>();
 }
 
 }  // namespace common

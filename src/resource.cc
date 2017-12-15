@@ -269,6 +269,7 @@ class ResourceManagerImpl : public ResourceManager {
     explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
       mshadow::SetDevice<xpu>(ctx.dev_id);
       resource.var = Engine::Get()->NewVariable();
+      /*
       if (ctx.dev_mask() == Context::kCPU) {
         pgen = new common::RandGenerator<xpu>();
       } else {
@@ -279,6 +280,8 @@ class ResourceManagerImpl : public ResourceManager {
         LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
 #endif
       }
+       */
+      pgen = common::NewRandGenerator<xpu>();
       const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
       common::RandGeneratorSeed(pgen, seed);
       resource.ptr_ = pgen;

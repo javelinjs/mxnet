@@ -42,5 +42,12 @@ inline void RandGeneratorSeed(RandGenerator<gpu> *gen, unsigned int seed) {
   gen->Seed(seed, i);
 }
 
+template<>
+inline RandGenerator<gpu> *NewRandGenerator() {
+  RandGenerator<gpu, DType> *gen;
+  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu>)));
+  return gen;
+};
+
 }  // namespace common
 }  // namespace mxnet
