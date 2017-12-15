@@ -272,7 +272,7 @@ class ResourceManagerImpl : public ResourceManager {
       const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
       if (ctx.dev_mask() == Context::kCPU) {
         pgen = new common::RandGenerator<cpu>();
-        pgen->Seed(seed);
+        pgen->Seed(seed, 0);
       } else {
         CHECK_EQ(ctx.dev_mask(), Context::kGPU);
 #if MXNET_USE_CUDA

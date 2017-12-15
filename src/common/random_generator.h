@@ -45,7 +45,7 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
 template<typename xpu>
-struct RandGeneratorSeed {
+struct RandGeneratorSeed<xpu> {
   MSHADOW_XINLINE static void Map(int i,
                                   unsigned int seed,
                                   RandGenerator<xpu> *gen) {
@@ -59,7 +59,7 @@ public:
   typedef typename std::conditional<std::is_floating_point<DType>::value,
                                     DType, float>::type FType;
   explicit RandGenerator() {}
-  MSHADOW_XINLINE void Seed(unsigned int seed, unsigned int idx = 0) { engine.seed(seed); }
+  MSHADOW_XINLINE void Seed(unsigned int seed, unsigned int idx) { engine.seed(seed); }
   MSHADOW_XINLINE int rand(unsigned int i = 0) { return engine(); }
   MSHADOW_XINLINE FType uniform(unsigned int i = 0) { return uniformNum(engine); }
   MSHADOW_XINLINE FType normal(unsigned int i = 0) { return normalNum(engine); }
