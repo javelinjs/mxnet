@@ -24,8 +24,8 @@
  */
 
 #include <algorithm>
-#include <mshadow/cuda/tensor_gpu-inl.cuh>
 #include "./random_generator.h"
+#include "../operator/mxnet_op.h"
 #include "./cuda_utils.h"
 
 namespace mxnet {
