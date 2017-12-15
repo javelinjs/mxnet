@@ -37,16 +37,23 @@ __global__ void rand_generator_seed_kernel(RandGenerator<gpu, float> *pgen, unsi
 }
 
 template<>
-inline void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, unsigned int seed) {
+void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, unsigned int seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
 }
 
 template<>
-inline RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
+RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
   RandGenerator<gpu, float> *gen;
   CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, float>)));
+  return gen;
+};
+
+template<>
+RandGenerator<gpu, double> *NewRandGenerator<gpu, double>() {
+  RandGenerator<gpu, double> *gen;
+  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, double>)));
   return gen;
 };
 

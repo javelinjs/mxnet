@@ -44,10 +44,10 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-inline void RandGeneratorSeed(RandGenerator<xpu, DType> *, unsigned int seed);
+void RandGeneratorSeed(RandGenerator<xpu, DType> *, unsigned int seed);
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-inline RandGenerator<xpu, DType> *NewRandGenerator();
+RandGenerator<xpu, DType> *NewRandGenerator();
 
 template<typename DType>
 class RandGenerator<cpu, DType> {
@@ -65,7 +65,7 @@ private:
   std::normal_distribution<FType> normalNum;
 };
 
-#ifdef MXNET_USE_CUDA
+#if MXNET_USE_CUDA
 #define CURAND_STATE_SIZE 64
 
 // uniform number generation in Cuda made consistent with stl (include 0 but exclude 1)
@@ -111,16 +111,6 @@ private:
   curandState_t states_[CURAND_STATE_SIZE];
 };
 #endif  // MXNET_USE_CUDA
-
-template<>
-inline void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
-  gen->Seed(seed, 0);
-}
-
-template<>
-inline RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
-  return new RandGenerator<cpu>();
-}
 
 }  // namespace common
 }  // namespace mxnet
