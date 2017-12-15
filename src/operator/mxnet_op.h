@@ -525,7 +525,8 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 }
 
 template<typename OP, typename GType, typename ...Args>
-__global__ void mxnet_generic_kernel_rnd_native(common::RandGenerator<gpu, GType> *rnd, int N, Args... args) {
+__global__ void mxnet_generic_kernel_rnd_native(common::random::RandGenerator<gpu, GType> *rnd,
+                                                int N, Args... args) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   for (int i = id * 128; i < N; i += CURAND_STATE_SIZE * 128) {
     for (int j = 0; j < 128 && i + j < N; ++j) {
