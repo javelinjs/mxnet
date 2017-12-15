@@ -31,22 +31,22 @@
 namespace mxnet {
 namespace common {
 
-__global__ void rand_generator_seed_kernel(RandGenerator<gpu> *pgen, unsigned int seed) {
+__global__ void rand_generator_seed_kernel(RandGenerator<gpu, float> *pgen, unsigned int seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   pgen->Seed(seed, id);
 }
 
 template<>
-inline void RandGeneratorSeed(RandGenerator<gpu> *gen, unsigned int seed) {
+inline void RandGeneratorSeed(RandGenerator<gpu, float> *gen, unsigned int seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
 }
 
 template<>
-inline RandGenerator<gpu> *NewRandGenerator() {
-  RandGenerator<gpu> *gen;
-  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu>)));
+inline RandGenerator<gpu, float> *NewRandGenerator() {
+  RandGenerator<gpu, float> *gen;
+  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, float>)));
   return gen;
 };
 

@@ -43,11 +43,11 @@ namespace common {
 template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
-template<typename xpu>
-inline void RandGeneratorSeed(RandGenerator<xpu> *, unsigned int seed);
+template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
+inline void RandGeneratorSeed(RandGenerator<xpu, DType> *, unsigned int seed);
 
-template<typename xpu>
-inline RandGenerator<xpu> *NewRandGenerator();
+template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
+inline RandGenerator<xpu, DType> *NewRandGenerator();
 
 template<typename DType>
 class RandGenerator<cpu, DType> {
@@ -113,12 +113,12 @@ private:
 #endif  // MXNET_USE_CUDA
 
 template<>
-inline void RandGeneratorSeed(RandGenerator<cpu> *gen, unsigned int seed) {
+inline void RandGeneratorSeed(RandGenerator<cpu, float> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
 template<>
-inline RandGenerator<cpu> *NewRandGenerator() {
+inline RandGenerator<cpu, float> *NewRandGenerator() {
   return new RandGenerator<cpu>();
 }
 
