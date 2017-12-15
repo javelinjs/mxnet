@@ -94,10 +94,9 @@ struct Resource {
   }
 
   template<typename xpu, typename DType>
-  inline common::RandGenerator<xpu, DType>* get_sampler() const {
+  inline common::random::RandGenerator<xpu, DType>* get_sampler() const {
     CHECK_EQ(req.type, ResourceRequest::kSampler);
-    common::RandGenerator<xpu, DType> *ret = static_cast<common::RandGenerator<xpu, DType>*>(ptr_);
-    return ret;
+    return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
   }
 
   /*!
