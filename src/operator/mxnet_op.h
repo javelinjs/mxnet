@@ -581,7 +581,7 @@ struct Kernel<OP, gpu> {
   }
 
   template<typename ...Args>
-  inline static void LaunchDefaultStream(int N, Args... args) {
+  inline static void LaunchDefaultStream(const int N, Args... args) {
     using namespace mshadow::cuda;
     int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel<OP, Args...>
@@ -594,7 +594,7 @@ struct Kernel<OP, gpu> {
                                      const int N, Args... args) {
     using namespace mshadow::cuda;
     mxnet_generic_kernel_rnd_native<OP, GType, Args...>
-    <<<1, CURAND_STATE_SIZE, 0, mshadow::Stream<gpu>::GetStream(s)>>>(rnd, N, args...);
+    <<<1, CURAND_STATE_SIZE, 0, 0>>>(rnd, N, args...);
   }
 };
 #endif  // __CUDACC__
