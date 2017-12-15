@@ -393,6 +393,29 @@ struct Kernel<OP, cpu> {
     return true;
   }
 
+  // FIXME: no need
+  template<typename ...Args>
+  inline static bool LaunchDefaultStream(mshadow::Stream<cpu> *, const int N, Args... args) {
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    } else {
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, args...);
+      }
+    }
+#else
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, args...);
+    }
+#endif
+    return true;
+  }
+
   /*!
    * \brief Launch CPU kernel which has OMP tuning data available.
    * When using this for a new kernel op, add declaration and tuning objects to
