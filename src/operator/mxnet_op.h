@@ -391,29 +391,6 @@ struct Kernel<OP, cpu> {
     return true;
   }
 
-  // FIXME: no need
-  template<typename ...Args>
-  inline static bool LaunchDefaultStream(const int N, Args... args) {
-#ifdef _OPENMP
-    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    if (omp_threads < 2) {
-      for (int i = 0; i < N; ++i) {
-        OP::Map(i, args...);
-      }
-    } else {
-      #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < N; ++i) {
-        OP::Map(i, args...);
-      }
-    }
-#else
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, args...);
-    }
-#endif
-    return true;
-  }
-
   /*!
    * \brief Launch CPU kernel which has OMP tuning data available.
    * When using this for a new kernel op, add declaration and tuning objects to
@@ -474,7 +451,7 @@ struct Kernel<OP, cpu> {
 
   template<typename GType, typename ...Args>
   inline static void LaunchRndNative(mshadow::Stream<cpu> *s,
-                                     common::RandGenerator<cpu, GType> *rnd,
+                                     common::random::RandGenerator<cpu, GType> *rnd,
                                      const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
@@ -578,17 +555,9 @@ struct Kernel<OP, gpu> {
         N, args...);
   }
 
-  template<typename ...Args>
-  inline static void LaunchDefaultStream(const int N, Args... args) {
-    using namespace mshadow::cuda;
-    int ngrid = std::min(kMaxGridNum, (N + kBaseThreadNum - 1) / kBaseThreadNum);
-    mxnet_generic_kernel<OP, Args...>
-      <<<ngrid, kBaseThreadNum, 0, 0>>>(N, args...);
-  }
-
   template<typename GType, typename ...Args>
   inline static void LaunchRndNative(mshadow::Stream<gpu> *s,
-                                     common::RandGenerator<gpu, GType> *rnd,
+                                     common::random::RandGenerator<gpu, GType> *rnd,
                                      const int N, Args... args) {
     using namespace mshadow::cuda;
     mxnet_generic_kernel_rnd_native<OP, GType, Args...>

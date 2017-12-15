@@ -164,6 +164,9 @@ class ResourceManagerImpl : public ResourceManager {
     gpu_rand_.ForEach([seed](size_t i, ResourceRandom<gpu> *p) {
         p->Seed(seed);
       });
+    gpu_sampler_.ForEach([seed](size_t i, ResourceSampler<gpu> *p) {
+      p->Seed(seed);
+    });
 #endif
   }
 
@@ -262,53 +265,30 @@ class ResourceManagerImpl : public ResourceManager {
     /*! \brief the context of the PRNG */
     Context ctx;
     /*! \brief pointer to PRNG */
-    common::RandGenerator<xpu> *pgen;
+    common::random::RandGenerator<xpu> *pgen;
     /*! \brief resource representation */
     Resource resource;
     /*! \brief constructor */
     explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
       mshadow::SetDevice<xpu>(ctx.dev_id);
       resource.var = Engine::Get()->NewVariable();
-      /*
-      if (ctx.dev_mask() == Context::kCPU) {
-        pgen = new common::RandGenerator<xpu>();
-      } else {
-        CHECK_EQ(ctx.dev_mask(), Context::kGPU);
-#if MXNET_USE_CUDA
-        CUDA_CALL(cudaMalloc(&pgen, sizeof(common::RandGenerator<gpu>)));
-#else
-        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-      }
-       */
-      pgen = common::NewRandGenerator<xpu>();
+      pgen = common::random::NewRandGenerator<xpu>();
       const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
-      common::RandGeneratorSeed(pgen, seed);
+      common::random::RandGeneratorSeed(pgen, seed);
       resource.ptr_ = pgen;
       resource.req = ResourceRequest(ResourceRequest::kSampler);
     }
     ~ResourceSampler() {
-      common::RandGenerator<xpu> *r = pgen;
-      if (ctx.dev_mask() == Context::kCPU) {
+      common::random::RandGenerator<xpu> *r = pgen;
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
-          MSHADOW_CATCH_ERROR(delete r);
+          MSHADOW_CATCH_ERROR(common::random::DeleteRandGenerator(r));
         }, ctx, resource.var);
-      } else {
-#if MXNET_USE_CUDA
-        Engine::Get()->DeleteVariable(
-        [r](RunContext rctx) {
-          cudaFree(r);
-        }, ctx, resource.var);
-#else
-        LOG(FATAL) << MXNET_GPU_NOT_ENABLED_ERROR;
-#endif
-      }
     }
     // set seed to a sampler
     inline void Seed(uint32_t global_seed) {
       uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
-      common::RandGenerator<xpu> *r = pgen;
+      common::random::RandGenerator<xpu> *r = pgen;
       Engine::Get()->PushAsync(
       [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         if (rctx.get_ctx().dev_mask() == Context::kCPU) {
