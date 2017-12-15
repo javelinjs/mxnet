@@ -44,15 +44,6 @@ namespace common {
 template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
-struct RandGeneratorSeed {
-  template<typename xpu, typename DType>
-  MSHADOW_XINLINE static void Map(int i,
-                                  unsigned int seed,
-                                  RandGenerator<xpu, DType> *gen) {
-    gen->Seed(seed, i);
-  }
-};
-
 template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
@@ -114,6 +105,17 @@ public:
   curandState_t states_[CURAND_STATE_SIZE];
 };
 #endif  // MXNET_USE_CUDA
+
+template<typename xpu>
+struct RandGeneratorSeed {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int i,
+                                  unsigned int seed,
+                                  RandGenerator<xpu, DType> *gen) {
+    gen->Seed(seed, i);
+  }
+};
+
 
 }  // namespace common
 }  // namespace mxnet
