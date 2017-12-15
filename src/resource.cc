@@ -294,7 +294,7 @@ class ResourceManagerImpl : public ResourceManager {
           MSHADOW_CATCH_ERROR(delete r);
         }, ctx, resource.var);
       } else {
-#if MSHADOW_USE_CUDA
+#if MXNET_USE_CUDA
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
           cudaFree(r);
@@ -311,7 +311,7 @@ class ResourceManagerImpl : public ResourceManager {
       Engine::Get()->PushAsync(
       [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
         if (rctx.get_ctx().dev_mask() == Context::kCPU) {
-          r->Seed(seed);
+          r->Seed(seed, 0);
         } else {
           // TODO
           LOG(FATAL) << "Seed for GPU.";
