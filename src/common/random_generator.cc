@@ -30,12 +30,12 @@ namespace common {
 namespace random {
 
 template<typename DType>
-void RandGeneratorSeed<cpu, DType>(RandGenerator<cpu, DType> *gen, unsigned int seed) {
+void RandGeneratorSeed(RandGenerator<cpu, DType> *gen, unsigned int seed) {
   gen->Seed(seed, 0);
 }
 
 template<typename DType>
-RandGenerator<cpu, DType> *NewRandGenerator<cpu, DType>() {
+RandGenerator<cpu, DType> *NewRandGenerator() {
   return new RandGenerator<cpu, DType>();
 }
 
