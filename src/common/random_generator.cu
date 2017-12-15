@@ -20,10 +20,11 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file random_generator.cu
- * \brief gpu util functions for random number generator.
+ * \brief gpu functions for random number generator.
  */
 
 #include <algorithm>
+#include <mshadow/cuda/tensor_gpu-inl.cuh>
 #include "./cuda_utils.h"
 #include "./random_generator.h"
 
@@ -39,12 +40,11 @@ template<>
 inline void RandGeneratorSeed(RandGenerator<gpu> *gen, unsigned int seed) {
   int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
-  gen->Seed(seed, i);
 }
 
 template<>
 inline RandGenerator<gpu> *NewRandGenerator() {
-  RandGenerator<gpu, DType> *gen;
+  RandGenerator<gpu> *gen;
   CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu>)));
   return gen;
 };
