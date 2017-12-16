@@ -41,7 +41,7 @@ __global__ void rand_generator_seed_kernel(RandGenerator<gpu, DType> *pgen, unsi
 template<>
 void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, unsigned int seed) {
   using namespace mshadow::cuda;
-  int ngrid = std::min(kMaxGridNum, (CURAND_STATE_SIZE + kBaseThreadNum - 1) / kBaseThreadNum);
+  int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
 }
 
