@@ -222,7 +222,7 @@ class ResourceManagerImpl : public ResourceManager {
     std::vector<SpaceAllocator> space;
     /*! \brief resource representation */
     std::vector<Resource> resource;
-    /*! \brief current pointer to the round roubin alloator */
+    /*! \brief current pointer to the round roubin allocator */
     std::atomic<size_t> curr_ptr;
     /*! \brief constructor */
     explicit ResourceTempSpace(Context ctx, size_t ncopy)

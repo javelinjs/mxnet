@@ -527,9 +527,12 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 template<typename OP, typename GType, typename ...Args>
 __global__ void mxnet_generic_kernel_rnd_native(common::random::RandGenerator<gpu, GType> *rnd,
                                                 int N, Args... args) {
+  using namespace mxnet::common::random;
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  for (int i = id * 128; i < N; i += CURAND_STATE_SIZE * 128) {
-    for (int j = 0; j < 128 && i + j < N; ++j) {
+  for (int i = id * kGPUMinRndNumberPerThread;
+        i < N;
+        i += kGPURndStateNum * kGPUMinRndNumberPerThread) {
+    for (int j = 0; j < kGPUMinRndNumberPerThread && i + j < N; ++j) {
       OP::Map(i + j, id, rnd, args...);
     }
   }
@@ -561,8 +564,10 @@ struct Kernel<OP, gpu> {
                                      common::random::RandGenerator<gpu, GType> *rnd,
                                      const int N, Args... args) {
     using namespace mshadow::cuda;
+    const int nloop(1 + (N - 1) / common::random::kGPUMinRndNumberPerThread);
+    int ngrid = std::min(kMaxGridNum, (nloop + kBaseThreadNum - 1) / kBaseThreadNum);
     mxnet_generic_kernel_rnd_native<OP, GType, Args...>
-    <<<1, CURAND_STATE_SIZE, 0, 0>>>(rnd, N, args...);
+      <<<ngrid, kBaseThreadNum, 0, 0>>>(rnd, N, args...);
   }
 };
 #endif  // __CUDACC__
