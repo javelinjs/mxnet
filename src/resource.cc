@@ -125,7 +125,7 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
-        case ResourceRequest::kSampler: return cpu_sampler_->GetNext();
+        case ResourceRequest::kNativeRandom: return cpu_sampler_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
@@ -142,7 +142,7 @@ class ResourceManagerImpl : public ResourceManager {
               return new ResourceTempSpace(ctx, gpu_temp_space_copy_);
             })->GetNext();
         }
-        case ResourceRequest::kSampler: {
+        case ResourceRequest::kNativeRandom: {
           return gpu_sampler_.Get(ctx.dev_id, [ctx, this]() {
             return new ResourceSampler<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
           })->GetNext();
@@ -286,7 +286,7 @@ class ResourceManagerImpl : public ResourceManager {
         FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
         sampler[i] = r;
         resource[i].ptr_ = sampler[i];
-        resource[i].req = ResourceRequest(ResourceRequest::kSampler);
+        resource[i].req = ResourceRequest(ResourceRequest::kNativeRandom);
       }
     }
     ~ResourceSampler() {

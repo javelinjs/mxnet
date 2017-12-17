@@ -496,7 +496,7 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
 }
 
 inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
-  return { ResourceRequest::kSampler, ResourceRequest::kTempSpace };
+  return { ResourceRequest::kNativeRandom, ResourceRequest::kTempSpace };
 }
 
 }  // namespace op
