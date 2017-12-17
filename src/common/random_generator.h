@@ -95,20 +95,24 @@ public:
 
   __device__ __host__ explicit RandGenerator() {}
 
-  virtual MSHADOW_XINLINE __device__ int rand() {
+  MSHADOW_XINLINE __device__ int rand() {
     return curand(&state_);
   }
 
-  virtual MSHADOW_XINLINE __device__ float uniform() {
+  MSHADOW_XINLINE __device__ float uniform() {
     return static_cast<float>(1.0) - curand_uniform(&state_);
   }
 
-  virtual MSHADOW_XINLINE __device__ float normal() {
+  MSHADOW_XINLINE __device__ float normal() {
     return curand_normal(&state_);
   }
 
   MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
     return state_;
+  }
+
+  MSHADOW_XINLINE __device__ set_state(curandStatePhilox4_32_10_t s) {
+    state_ = s;
   }
 
 private:
@@ -122,20 +126,24 @@ public:
   curandStatePhilox4_32_10_t state) : state_(state) {}
   __device__ __host__ explicit RandGenerator() {}
 
-  virtual MSHADOW_XINLINE __device__ int rand() {
+  MSHADOW_XINLINE __device__ int rand() {
     return curand(&state_);
   }
 
-  virtual MSHADOW_XINLINE __device__ double uniform() {
+  MSHADOW_XINLINE __device__ double uniform() {
     return static_cast<double>(1.0) - curand_uniform_double(&state_);
   }
 
-  virtual MSHADOW_XINLINE __device__ double normal() {
+  MSHADOW_XINLINE __device__ double normal() {
     return curand_normal_double(&state_);
   }
 
   MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
     return state_;
+  }
+
+  MSHADOW_XINLINE __device__ set_state(curandStatePhilox4_32_10_t s) {
+    state_ = s;
   }
 
 private:
@@ -162,18 +170,6 @@ public:
     states_[idx] = state;
   }
 
-  MSHADOW_XINLINE __device__ int rand() {
-    return curand(&states_[0]);
-  }
-
-  MSHADOW_XINLINE __device__ float uniform() {
-    return static_cast<float>(1.0) - curand_uniform(&states_[0]);
-  }
-
-  MSHADOW_XINLINE __device__ float normal() {
-    return curand_normal(&states_[0]);
-  }
-
 private:
   // sizeof(curandStatePhilox4_32_10_t) = 64
   // sizeof(curandState_t) = 48
@@ -198,18 +194,6 @@ public:
   MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
                                             uint32_t idx) {
     states_[idx] = state;
-  }
-
-  MSHADOW_XINLINE __device__ int rand() {
-    return curand(&states_[0]);
-  }
-
-  MSHADOW_XINLINE __device__ double uniform() {
-    return static_cast<double>(1.0) - curand_uniform_double(&states_[0]);
-  }
-
-  MSHADOW_XINLINE __device__ double normal() {
-    return curand_normal_double(&states_[0]);
   }
 
 private:
