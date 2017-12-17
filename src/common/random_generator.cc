@@ -29,28 +29,6 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-template<typename DType>
-class RandGenerator<cpu, DType> {
-public:
-  typedef typename std::conditional<std::is_floating_point<DType>::value,
-  DType, float>::type FType;
-
-  explicit RandGenerator() {}
-
-  MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) { engine.seed(seed); }
-
-  MSHADOW_XINLINE int rand() { return engine(); }
-
-  MSHADOW_XINLINE FType uniform() { return uniformNum(engine); }
-
-  MSHADOW_XINLINE FType normal() { return normalNum(engine); }
-
-private:
-  std::mt19937 engine;
-  std::uniform_real_distribution<FType> uniformNum;
-  std::normal_distribution<FType> normalNum;
-};
-
 template<>
 void RandGeneratorSeed<cpu, float>(Stream<cpu> *s,
                                    RandGenerator<cpu, float> *gen,
