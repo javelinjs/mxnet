@@ -123,8 +123,7 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
-        case ResourceRequest::kSampler:
-          return cpu_sampler_->resource;
+        case ResourceRequest::kSampler: return cpu_sampler_->resource;
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {

@@ -57,6 +57,32 @@ void DeleteRandGenerator<gpu, float>(RandGenerator<gpu, float> *p) {
   if (p) cudaFree(p);
 }
 
+// unsigned int kGPURndStateNum = 64;
+
+template<typename DType>
+class RandGeneratorHost<gpu, DType> {
+public:
+  explicit RandGeneratorWrapper() {
+
+  }
+
+  MSHADOW_XINLINE void Seed(unsigned int seed, unsigned int state_idx) {
+    using namespace mshadow::cuda;
+    int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
+    rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
+  }
+
+  RandGenerator<gpu, DType> *Get() {
+
+  };
+
+private:
+  unsigned int seed_;
+  unsigned int num_states_;
+  curandState_t *states_;
+  RandGenerator<gpu, DType> *gen_device_;
+};
+
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet

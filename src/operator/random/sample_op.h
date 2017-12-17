@@ -286,7 +286,7 @@ struct SampleMaster<xpu, UniformSampler<xpu>> {
     Scalar2Array<xpu, float> low(param.low, ctx), high(param.high, ctx);
     UniformSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(low.GetTensor(), high.GetTensor(), out, pgen, s);
     });
@@ -305,7 +305,7 @@ struct SampleMaster<xpu, NormalSampler<xpu>> {
     Scalar2Array<xpu, float> loc(param.loc, ctx), scale(param.scale, ctx);
     NormalSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(loc.GetTensor(), scale.GetTensor(), out, pgen, s);
     });
@@ -325,7 +325,7 @@ struct SampleMaster<xpu, GammaSampler<xpu>> {
     Scalar2Array<xpu, float> alpha(param.alpha, ctx), beta(param.beta, ctx);
     GammaSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(alpha.GetTensor(), beta.GetTensor(), out, pgen, s);
     });
@@ -344,7 +344,7 @@ struct SampleMaster<xpu, ExponentialSampler<xpu>> {
     Scalar2Array<xpu, float> lam(param.lam, ctx);
     ExponentialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(lam.GetTensor(), out, pgen, s);
     });
@@ -363,7 +363,7 @@ struct SampleMaster<xpu, PoissonSampler<xpu>> {
     Scalar2Array<xpu, float> lam(param.lam, ctx);
     PoissonSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(lam.GetTensor(), out, pgen, s);
     });
@@ -383,7 +383,7 @@ struct SampleMaster<xpu, NegativeBinomialSampler<xpu>> {
     Scalar2Array<xpu, float> k(param.k, ctx), p(param.p, ctx);
     NegativeBinomialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(k.GetTensor(), p.GetTensor(), out, pgen, s);
     });
@@ -405,7 +405,7 @@ struct SampleMaster<xpu, GeneralizedNegativeBinomialSampler<xpu>> {
     Scalar2Array<xpu, float> mu(param.mu, ctx), alpha(param.alpha, ctx);
     GeneralizedNegativeBinomialSampler<xpu> sampler;
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
-      RandGenerator<xpu, OType> *pgen = ctx.requested[2].get_sampler<xpu, OType>();
+      RandGenerator<xpu, OType> *pgen = ctx.requested[0].get_sampler<xpu, OType>();
       Tensor<xpu, 1, OType> out = outputs->FlatTo1D<xpu, OType>(s);
       sampler.Sample(mu.GetTensor(), alpha.GetTensor(), out, pgen, s);
     });
@@ -496,7 +496,7 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
 }
 
 inline std::vector<ResourceRequest> SampleResource(const NodeAttrs& attrs) {
-  return { ResourceRequest::kRandom, ResourceRequest::kTempSpace, ResourceRequest::kSampler };
+  return { ResourceRequest::kSampler, ResourceRequest::kTempSpace };
 }
 
 }  // namespace op
