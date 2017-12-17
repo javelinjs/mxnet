@@ -45,7 +45,6 @@
 #include <functional>
 
 #include "../operator/mxnet_op.h"
-#include "./random_generator.h"
 
 namespace mxnet {
 namespace common {

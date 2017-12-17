@@ -570,7 +570,8 @@ struct Kernel<OP, gpu> {
                           (nloop + kBaseThreadNum - 1) / kBaseThreadNum);
     int nthread = ngrid * kBaseThreadNum;
     mxnet_generic_kernel_rnd_native<OP, GType, Args...>
-      <<<ngrid, kBaseThreadNum, 0, 0>>>(nthread, rnd, N, args...);
+      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        nthread, rnd, N, args...);
   }
 };
 #endif  // __CUDACC__

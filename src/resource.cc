@@ -90,6 +90,8 @@ class ResourceManagerImpl : public ResourceManager {
       : global_seed_(0) {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
+    cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_NATIVE_RAND_COPY", 1);
+    gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_NATIVE_RAND_COPY", 1);
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
@@ -97,7 +99,7 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_space_.reset(new ResourceTempSpace(
         Context::CPU(), cpu_temp_space_copy_));
     cpu_sampler_.reset(new ResourceSampler<cpu>(
-        Context::CPU(), global_seed_));
+        Context::CPU(), cpu_native_rand_copy_, global_seed_));
   }
   ~ResourceManagerImpl() {
     // need explicit delete, before engine get killed
@@ -123,7 +125,7 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
-        case ResourceRequest::kSampler: return cpu_sampler_->resource;
+        case ResourceRequest::kSampler: return cpu_sampler_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
@@ -142,8 +144,8 @@ class ResourceManagerImpl : public ResourceManager {
         }
         case ResourceRequest::kSampler: {
           return gpu_sampler_.Get(ctx.dev_id, [ctx, this]() {
-            return new ResourceSampler<gpu>(ctx, global_seed_);
-          })->resource;
+            return new ResourceSampler<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
+          })->GetNext();
         }
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
@@ -263,37 +265,56 @@ class ResourceManagerImpl : public ResourceManager {
   struct ResourceSampler {
     /*! \brief the context of the PRNG */
     Context ctx;
-    /*! \brief pointer to PRNG */
-    common::random::RandGenerator<xpu> *pgen;
+    /*! \brief pointes to sampler */
+    std::vector<common::random::RandGenerator<xpu> *> sampler;
     /*! \brief resource representation */
-    Resource resource;
+    std::vector<Resource> resource;
+    /*! \brief current pointer to the round roubin allocator */
+    std::atomic<size_t> curr_ptr;
     /*! \brief constructor */
-    explicit ResourceSampler(Context ctx, uint32_t global_seed) : ctx(ctx) {
-      mshadow::SetDevice<xpu>(ctx.dev_id);
-      resource.var = Engine::Get()->NewVariable();
-      pgen = common::random::NewRandGenerator<xpu>();
+    explicit ResourceSampler(Context ctx, size_t ncopy, uint32_t global_seed)
+        : ctx(ctx), sampler(ncopy), resource(ncopy), curr_ptr(0) {
       const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
-      common::random::RandGeneratorSeed(pgen, seed);
-      resource.ptr_ = pgen;
-      resource.req = ResourceRequest(ResourceRequest::kSampler);
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        resource[i].var = Engine::Get()->NewVariable();
+        sampler[i] = common::random::NewRandGenerator<xpu>();
+        common::random::RandGeneratorSeed(sampler[i], seed);
+        resource[i].ptr_ = sampler[i];
+        resource[i].req = ResourceRequest(ResourceRequest::kSampler);
+      }
     }
     ~ResourceSampler() {
-      common::random::RandGenerator<xpu> *r = pgen;
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
           MSHADOW_CATCH_ERROR(common::random::DeleteRandGenerator(r));
-        }, ctx, resource.var);
+        }, ctx, resource[i].var);
+      }
     }
     // set seed to a sampler
     inline void Seed(uint32_t global_seed) {
       uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
-      common::random::RandGenerator<xpu> *r = pgen;
-      Engine::Get()->PushAsync(
-      [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-        common::random::RandGeneratorSeed(r, seed);
-        on_complete();
-      }, ctx, {}, {resource.var},
-      FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceSamplerSetSeed"));
+      for (size_t i = 0; i < sampler.size(); ++i) {
+        common::random::RandGenerator<xpu> *r = sampler[i];
+        Engine::Get()->PushAsync(
+        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          common::random::RandGeneratorSeed(r, seed);
+          on_complete();
+        }, ctx, {}, {resource[i].var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceSamplerSetSeed"));
+      }
+    }
+    // get next resource in round roubin matter
+    inline Resource GetNext() {
+      const size_t kMaxDigit = std::numeric_limits<size_t>::max() / 2;
+      size_t ptr = ++curr_ptr;
+      // reset ptr to avoid undefined behavior during overflow
+      // usually this won't happen
+      if (ptr > kMaxDigit) {
+        curr_ptr.store((ptr + 1) % sampler.size());
+      }
+      return resource[ptr % sampler.size()];
     }
   };
 
@@ -301,6 +322,10 @@ class ResourceManagerImpl : public ResourceManager {
   int cpu_temp_space_copy_;
   /*! \brief number of copies in GPU temp space */
   int gpu_temp_space_copy_;
+  /*! \brief number of copies in CPU native random sampler */
+  int cpu_native_rand_copy_;
+  /*! \brief number of copies in GPU native random sampler */
+  int gpu_native_rand_copy_;
   /*! \brief Reference to the engine */
   std::shared_ptr<Engine> engine_ref_;
   /*! \brief Reference to the storage */
