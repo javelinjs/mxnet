@@ -537,13 +537,17 @@ __global__ void mxnet_generic_kernel_rnd_native(const int nthread,
                                                 const int N, Args... args) {
   using namespace mxnet::common::random;
   int id = blockIdx.x * blockDim.x + threadIdx.x;
+  RandGeneratorGlobal<gpu, GType> *grnd =
+      reinterpret_cast<RandGeneratorGlobal<gpu, GType> *>(rnd);
+  RandGenerator<gpu, GType> sampler(grnd->GetStates() + id);
   for (int i = id * kGPUMinRndNumberPerThread;
         i < N;
         i += nthread * kGPUMinRndNumberPerThread) {
     for (int j = 0; j < kGPUMinRndNumberPerThread && i + j < N; ++j) {
-      OP::Map(i + j, id, rnd, args...);
+      OP::Map(i + j, &sampler, args...);
     }
   }
+  sampler.copy_state_to(grnd->GetStates(), id);
 }
 
 template<typename OP>

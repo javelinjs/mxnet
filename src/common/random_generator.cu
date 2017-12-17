@@ -33,28 +33,29 @@ namespace common {
 namespace random {
 
 template<typename DType>
-__global__ void rand_generator_seed_kernel(RandGenerator<gpu, DType> *pgen, uint32_t seed) {
+__global__ void rand_generator_seed_kernel(RandGeneratorGlobal<gpu, DType> *gen, uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  pgen->Seed(seed, id);
+  gen->Seed(seed, id);
 }
 
 template<>
 void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
-  rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);
+  rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(
+      reinterpret_cast<RandGeneratorGlobal<gpu, float> *>(gen), seed);
 }
 
 template<>
 RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
-  RandGenerator<gpu, float> *gen;
-  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGenerator<gpu, float>)));
+  RandGeneratorGlobal<gpu, float> *gen;
+  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGeneratorGlobal<gpu, float>)));
   return gen;
 };
 
 template<>
 void DeleteRandGenerator<gpu, float>(RandGenerator<gpu, float> *p) {
-  if (p) cudaFree(p);
+  if (p) cudaFree(reinterpret_cast<RandGeneratorGlobal<gpu, float> *>(p));
 }
 
 }  // namespace random

@@ -35,11 +35,11 @@ namespace op {
 template<typename xpu>
 struct SampleUniformKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lower, const IType *upper, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(lower[i/nBatch] + (upper[i/nBatch] - lower[i/nBatch]) * gen->uniform(sid));
+    out[i] = OType(lower[i/nBatch] + (upper[i/nBatch] - lower[i/nBatch]) * gen->uniform());
   }
 };
 
@@ -60,11 +60,11 @@ struct UniformSampler {
 template<typename xpu>
 struct SampleNormalKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *mean, const IType *std, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(gen->normal(sid) * std[i/nBatch] + mean[i/nBatch]);
+    out[i] = OType(gen->normal() * std[i/nBatch] + mean[i/nBatch]);
   }
 };
 
@@ -85,11 +85,11 @@ struct NormalSampler {
 template<typename xpu>
 struct SampleExponentialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, OType> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, OType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lambda, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(-log(1.0-gen->uniform(sid)) / lambda[i/nBatch]);
+    out[i] = OType(-log(1.0-gen->uniform()) / lambda[i/nBatch]);
   }
 };
 
@@ -107,34 +107,34 @@ struct ExponentialSampler {
 };
 
 template<typename xpu, typename IType, typename OType>
-MSHADOW_XINLINE OType SampleGamma(IType a, IType b, int sid, RandGenerator<xpu, OType> *gen) {
+MSHADOW_XINLINE OType SampleGamma(IType a, IType b, RandGenerator<xpu, OType> *gen) {
   // Generate one sample of the gamma distribution
   OType sample;
   OType d = a < 1 ? a + 2.0 / 3.0 : a - 1.0 / 3.0;
   OType k = sqrt(9.0 * d);
   OType c = 1.0 / k;
   while (1) {
-    OType Z = gen->normal(sid);
+    OType Z = gen->normal();
     if (Z > -k) {
       OType x = 1.0 + c * Z;
       OType V = x * x * x;
-      if (log(1.0-gen->uniform(sid)) < 0.5 * Z * Z + d * (1.0 - V + log(V))) {
+      if (log(1.0-gen->uniform()) < 0.5 * Z * Z + d * (1.0 - V + log(V))) {
         sample = d * V * b;
         break;
       }
     }
   }
-  return a < 1 ? sample * pow(gen->uniform(sid), OType(1.0 / a)) : sample;
+  return a < 1 ? sample * pow(gen->uniform(), OType(1.0 / a)) : sample;
 }
 
 template<typename xpu>
 struct SampleGammaKernel {
   template<typename IType, typename OType, typename FType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, FType> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, FType> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *alpha, const IType *beta, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(SampleGamma(alpha[i/nBatch], beta[i/nBatch], sid, gen));
+    out[i] = OType(SampleGamma(alpha[i/nBatch], beta[i/nBatch], gen));
   }
 };
 
@@ -156,14 +156,14 @@ struct GammaSampler {
 };
 
 template<typename xpu>
-MSHADOW_XINLINE int SamplePoisson(float lambda, int sid, RandGenerator<xpu, float> *gen) {
+MSHADOW_XINLINE int SamplePoisson(float lambda, RandGenerator<xpu, float> *gen) {
   // Generate one sample of the poisson distribution. Intentionally written
   // towards a specific type (float) for internal computation which is sufficient
   // for accurate enough computation.
   if ( lambda < 12.0 ) {
     float t = expf(-lambda);
     int x = 0;
-    for ( float prod = gen->uniform(sid); prod > t; prod *= gen->uniform(sid) ) { x += 1; }
+    for ( float prod = gen->uniform(); prod > t; prod *= gen->uniform() ) { x += 1; }
     return x;
   } else {
     // Approximation for high lambda according to:
@@ -176,12 +176,12 @@ MSHADOW_XINLINE int SamplePoisson(float lambda, int sid, RandGenerator<xpu, floa
     float em(0), t(0), y(0);
     do {
       do {
-        y = tanf(pi * gen->uniform(sid));
+        y = tanf(pi * gen->uniform());
         em = sq * y + lambda;
       } while (em < 0.0);
       em = floorf(em);
       t = 0.9 * (1.0 + y * y) * expf(em * loglambda - lgammaf(em + 1.0) - g);
-    } while (gen->uniform(sid) > t);
+    } while (gen->uniform() > t);
     return static_cast<int>(em);
   }
 }
@@ -189,11 +189,11 @@ MSHADOW_XINLINE int SamplePoisson(float lambda, int sid, RandGenerator<xpu, floa
 template<typename xpu>
 struct SamplePoissonKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, float> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, float> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *lambda, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
-    out[i] = OType(SamplePoisson(lambda[i/nBatch], sid, gen));
+    out[i] = OType(SamplePoisson(lambda[i/nBatch], gen));
   }
 };
 
@@ -213,15 +213,15 @@ struct PoissonSampler {
 template<typename xpu>
 struct SampleNegativeBinomialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, float> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, float> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *k, const IType *p, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
     float alpha = k[i/nBatch];
     float prob = p[i/nBatch];
     float beta = (1.0 - prob) / prob;
-    float lambda = SampleGamma(alpha, beta, sid, gen);
-    out[i] = OType(SamplePoisson(lambda, sid, gen));
+    float lambda = SampleGamma(alpha, beta, gen);
+    out[i] = OType(SamplePoisson(lambda, gen));
   }
 };
 
@@ -242,13 +242,13 @@ struct NegativeBinomialSampler {
 template<typename xpu>
 struct SampleGeneralizedNegativeBinomialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int i, int sid, RandGenerator<xpu, float> *gen,
+  MSHADOW_XINLINE static void Map(int i, RandGenerator<xpu, float> *gen,
                                   index_t nParm, index_t nSample,
                                   const IType *mu, const IType *alpha, OType *out) {
     index_t nBatch(1 + (nSample - 1) / nParm);
     float lambda = alpha[i/nBatch] == 0 ? static_cast<float>(mu[i/nBatch])
-            : SampleGamma(IType(1) / alpha[i/nBatch], alpha[i/nBatch] * mu[i/nBatch], sid, gen);
-    out[i] = OType(SamplePoisson(lambda, sid, gen));
+            : SampleGamma(IType(1) / alpha[i/nBatch], alpha[i/nBatch] * mu[i/nBatch], gen);
+    out[i] = OType(SamplePoisson(lambda, gen));
   }
 };
 
