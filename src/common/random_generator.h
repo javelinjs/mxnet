@@ -111,7 +111,7 @@ public:
     return state_;
   }
 
-  MSHADOW_XINLINE __device__ set_state(curandStatePhilox4_32_10_t s) {
+  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t s) {
     state_ = s;
   }
 
@@ -142,7 +142,7 @@ public:
     return state_;
   }
 
-  MSHADOW_XINLINE __device__ set_state(curandStatePhilox4_32_10_t s) {
+  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t s) {
     state_ = s;
   }
 
