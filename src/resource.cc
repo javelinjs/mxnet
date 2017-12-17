@@ -279,9 +279,8 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].var = Engine::Get()->NewVariable();
         common::random::RandGenerator<xpu> *r = common::random::NewRandGenerator<xpu>();
         Engine::Get()->PushSync(
-        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+        [r, seed](RunContext rctx) {
           common::random::RandGeneratorSeed(rctx.get_stream<xpu>(), r, seed);
-          on_complete();
         }, ctx, {}, {resource[i].var},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
         sampler[i] = r;
