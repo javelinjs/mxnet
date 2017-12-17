@@ -547,7 +547,7 @@ __global__ void mxnet_generic_kernel_rnd_native(const int nthread,
       OP::Map(i + j, &sampler, args...);
     }
   }
-  grnd->set_state(sampler.get_state());
+  grnd->set_state(sampler.get_state(), id);
 }
 
 template<typename OP>
