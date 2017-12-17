@@ -95,23 +95,23 @@ public:
 
   __device__ __host__ explicit RandGenerator() {}
 
-  MSHADOW_XINLINE __device__ int rand() {
+  MSHADOW_FORCE_INLINE __device__ int rand() {
     return curand(&state_);
   }
 
-  MSHADOW_XINLINE __device__ float uniform() {
+  MSHADOW_FORCE_INLINE __device__ float uniform() {
     return static_cast<float>(1.0) - curand_uniform(&state_);
   }
 
-  MSHADOW_XINLINE __device__ float normal() {
+  MSHADOW_FORCE_INLINE __device__ float normal() {
     return curand_normal(&state_);
   }
 
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
+  MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state() {
     return state_;
   }
 
-  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t s) {
+  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t s) {
     state_ = s;
   }
 
@@ -122,27 +122,28 @@ private:
 template<>
 class RandGenerator<gpu, double> {
 public:
-  __device__ __host__ explicit RandGenerator(
-  curandStatePhilox4_32_10_t state) : state_(state) {}
+  __device__ __host__ explicit RandGenerator(curandStatePhilox4_32_10_t state)
+      : state_(state) {}
+
   __device__ __host__ explicit RandGenerator() {}
 
-  MSHADOW_XINLINE __device__ int rand() {
+  MSHADOW_FORCE_INLINE __device__ int rand() {
     return curand(&state_);
   }
 
-  MSHADOW_XINLINE __device__ double uniform() {
+  MSHADOW_FORCE_INLINE __device__ double uniform() {
     return static_cast<double>(1.0) - curand_uniform_double(&state_);
   }
 
-  MSHADOW_XINLINE __device__ double normal() {
+  MSHADOW_FORCE_INLINE __device__ double normal() {
     return curand_normal_double(&state_);
   }
 
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
+  MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state() {
     return state_;
   }
 
-  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t s) {
+  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t s) {
     state_ = s;
   }
 
@@ -157,15 +158,16 @@ class RandGeneratorGlobal<gpu, DType> : public RandGenerator<gpu, DType> {
 public:
   __device__ __host__ explicit RandGeneratorGlobal() {}
 
-  MSHADOW_XINLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
+  MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
+    if (state_idx == 0) RandGenerator::set_state(states_[0]);
   }
 
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
+  MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
     return states_[idx];
   }
 
-  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
+  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
                                             uint32_t idx) {
     states_[idx] = state;
   }
@@ -183,15 +185,16 @@ class RandGeneratorGlobal<gpu, double> : public RandGenerator<gpu, double> {
 public:
   __device__ __host__ explicit RandGeneratorGlobal() {}
 
-  MSHADOW_XINLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
+  MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
+    if (state_idx == 0) RandGenerator::set_state(states_[0]);
   }
 
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
+  MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
     return states_[idx];
   }
 
-  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
+  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
                                             uint32_t idx) {
     states_[idx] = state;
   }
