@@ -91,7 +91,7 @@ template<typename DType>
 class RandGenerator<gpu, DType> {
 public:
   __device__ __host__ explicit RandGenerator(
-      curandStatePhilox4_32_10_t &state) : state_(state) {}
+      curandStatePhilox4_32_10_t state) : state_(state) {}
   __device__ __host__ explicit RandGenerator() {}
 
   MSHADOW_FORCE_INLINE __device__ int rand() {
@@ -154,7 +154,7 @@ public:
     return states_[idx];
   }
 
-  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t &state,
+  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
                                                  uint32_t idx) {
     states_[idx] = state;
   }
@@ -176,7 +176,7 @@ public:
     return states_[idx];
   }
 
-  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t &state,
+  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
                                                  uint32_t idx) {
     states_[idx] = state;
   }
