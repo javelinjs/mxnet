@@ -160,7 +160,7 @@ public:
 
   MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
-    if (state_idx == 0) RandGenerator::set_state(states_[0]);
+    if (state_idx == 0) RandGenerator<gpu, DType>::set_state(states_[0]);
   }
 
   MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
@@ -187,7 +187,7 @@ public:
 
   MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
-    if (state_idx == 0) RandGenerator::set_state(states_[0]);
+    if (state_idx == 0) RandGenerator<gpu, double>::set_state(states_[0]);
   }
 
   MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
