@@ -457,9 +457,9 @@ struct Kernel<OP, cpu> {
    * \param args Varargs to eventually pass to the OP::Map() functoion
    */
   template<typename GType, typename ...Args>
-  inline static void LaunchRndNative(mshadow::Stream<cpu> *,
-                                     common::random::RandGenerator<cpu, GType> *rnd,
-                                     const int N, Args... args) {
+  inline static void LaunchNativeRandomGenerator(mshadow::Stream<cpu> *,
+                                                 common::random::RandGenerator<cpu, GType> *rnd,
+                                                 const int N, Args... args) {
 #ifdef _OPENMP
     const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
     if (omp_threads < 2) {
@@ -572,9 +572,9 @@ struct Kernel<OP, gpu> {
   }
 
   template<typename GType, typename ...Args>
-  inline static void LaunchRndNative(mshadow::Stream<gpu> *s,
-                                     common::random::RandGenerator<gpu, GType> *rnd,
-                                     const int N, Args... args) {
+  inline static void LaunchNativeRandomGenerator(mshadow::Stream<gpu> *s,
+                                                 common::random::RandGenerator<gpu, GType> *rnd,
+                                                 const int N, Args... args) {
     using namespace mshadow::cuda;
     const int nloop(1 + (N - 1) / common::random::kGPUMinRndNumberPerThread);
     int ngrid = std::min(common::random::kGPURndStateNum / kBaseThreadNum,

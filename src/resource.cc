@@ -91,7 +91,7 @@ class ResourceManagerImpl : public ResourceManager {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_NATIVE_RAND_COPY", 1);
-    gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_NATIVE_RAND_COPY", 1);
+    gpu_native_rand_copy_ = dmlc::GetEnv("MXNET_GPU_NATIVE_RAND_COPY", 4);
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
     cpu_rand_.reset(new ResourceRandom<cpu>(
@@ -300,7 +300,7 @@ class ResourceManagerImpl : public ResourceManager {
         common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->PushAsync(
         [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
-          common::random::RandGeneratorSeed(r, seed);
+          common::random::RandGeneratorSeed(rctx.get_stream<xpu>(), r, seed);
           on_complete();
         }, ctx, {}, {resource[i].var},
         FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceSamplerSetSeed"));

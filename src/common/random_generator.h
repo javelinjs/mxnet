@@ -48,7 +48,7 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGeneratorGlobal;
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-void RandGeneratorSeed(RandGenerator<xpu, DType> *, uint32_t seed);
+void RandGeneratorSeed(Stream<xpu> *, RandGenerator<xpu, DType> *, uint32_t seed);
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
 RandGenerator<xpu, DType> *NewRandGenerator();
@@ -83,107 +83,6 @@ private:
 const int kGPUMinRndNumberPerThread = 64;
 // hold how many GPU random states
 const int kGPURndStateNum = 32768;
-
-// uniform number generation in Cuda made consistent with stl (include 0 but exclude 1)
-// by using 1.0-curand_uniform(). Needed as some samplers below won't be able to deal with
-// one of the boundary cases.
-template<typename DType>
-class RandGenerator<gpu, DType> {
-public:
-  __device__ __host__ explicit RandGenerator(
-      curandStatePhilox4_32_10_t state) : state_(state) {}
-  __device__ __host__ explicit RandGenerator() {}
-
-  MSHADOW_FORCE_INLINE __device__ int rand() {
-    return curand(&state_);
-  }
-
-  MSHADOW_FORCE_INLINE __device__ float uniform() {
-    return static_cast<float>(1.0) - curand_uniform(&state_);
-  }
-
-  MSHADOW_FORCE_INLINE __device__ float normal() {
-    return curand_normal(&state_);
-  }
-
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
-    return state_;
-  }
-
-private:
-  curandStatePhilox4_32_10_t state_;
-};
-
-template<>
-class RandGenerator<gpu, double> {
-public:
-  __device__ __host__ explicit RandGenerator(
-      curandStatePhilox4_32_10_t state) : state_(state) {}
-  __device__ __host__ explicit RandGenerator() {}
-
-  MSHADOW_FORCE_INLINE __device__ int rand() {
-    return curand(&state_);
-  }
-
-  MSHADOW_FORCE_INLINE __device__ double uniform() {
-    return static_cast<double>(1.0) - curand_uniform_double(&state_);
-  }
-
-  MSHADOW_FORCE_INLINE __device__ double normal() {
-    return curand_normal_double(&state_);
-  }
-
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
-    return state_;
-  }
-
-private:
-  curandStatePhilox4_32_10_t state_;
-};
-
-template<typename DType>
-class RandGeneratorGlobal<gpu, DType> : public RandGenerator<gpu, DType> {
-public:
-  __device__ __host__ explicit RandGeneratorGlobal() {}
-
-  MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
-    if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
-  }
-
-  MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
-    return states_[idx];
-  }
-
-  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
-                                                 uint32_t idx) {
-    states_[idx] = state;
-  }
-
-private:
-  curandStatePhilox4_32_10_t states_[kGPURndStateNum];
-};
-
-template<>
-class RandGeneratorGlobal<gpu, double> : public RandGenerator<gpu, double> {
-public:
-  __device__ __host__ explicit RandGeneratorGlobal() {}
-
-  MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
-    if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
-  }
-
-  MSHADOW_FORCE_INLINE __device__ curandStatePhilox4_32_10_t get_state(uint32_t idx) {
-    return states_[idx];
-  }
-
-  MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
-                                                 uint32_t idx) {
-    states_[idx] = state;
-  }
-
-private:
-  curandStatePhilox4_32_10_t states_[kGPURndStateNum];
-};
 
 #endif  // MXNET_USE_CUDA
 

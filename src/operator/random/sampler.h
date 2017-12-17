@@ -52,8 +52,8 @@ struct UniformSampler {
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleUniformKernel<xpu>, xpu>
-      ::LaunchRndNative(s, pgen, out.size(0), lower.size(0), out.size(0),
-                        lower.dptr_, upper.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, pgen, out.size(0), lower.size(0), out.size(0),
+                                    lower.dptr_, upper.dptr_, out.dptr_);
   }
 };
 
@@ -77,8 +77,8 @@ struct NormalSampler {
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleNormalKernel<xpu>, xpu>
-      ::LaunchRndNative(s, pgen, out.size(0), mean.size(0), out.size(0),
-                        mean.dptr_, std.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, pgen, out.size(0), mean.size(0), out.size(0),
+                                    mean.dptr_, std.dptr_, out.dptr_);
   }
 };
 
@@ -101,8 +101,8 @@ struct ExponentialSampler {
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     Kernel<SampleExponentialKernel<xpu>, xpu>
-      ::LaunchRndNative(s, pgen, out.size(0), lambda.size(0), out.size(0),
-                        lambda.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, pgen, out.size(0), lambda.size(0), out.size(0),
+                                    lambda.dptr_, out.dptr_);
   }
 };
 
@@ -150,8 +150,8 @@ struct GammaSampler {
                                       OType, float>::type FType;
     RandGenerator<xpu, FType> *gen = reinterpret_cast<RandGenerator<xpu, FType> *>(pgen);
     Kernel<SampleGammaKernel<xpu>, xpu>
-      ::LaunchRndNative(s, gen, out.size(0), alpha.size(0), out.size(0),
-                        alpha.dptr_, beta.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, gen, out.size(0), alpha.size(0), out.size(0),
+                                    alpha.dptr_, beta.dptr_, out.dptr_);
   }
 };
 
@@ -206,7 +206,8 @@ struct PoissonSampler {
                                    Stream<xpu> *s) {
     RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
     Kernel<SamplePoissonKernel<xpu>, xpu>
-      ::LaunchRndNative(s, gen, out.size(0), lambda.size(0), out.size(0), lambda.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, gen, out.size(0), lambda.size(0), out.size(0),
+                                    lambda.dptr_, out.dptr_);
   }
 };
 
@@ -235,7 +236,8 @@ struct NegativeBinomialSampler {
                                    Stream<xpu> *s) {
     RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
     Kernel<SampleNegativeBinomialKernel<xpu>, xpu>
-      ::LaunchRndNative(s, gen, out.size(0), k.size(0), out.size(0), k.dptr_, p.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, gen, out.size(0), k.size(0), out.size(0),
+                                    k.dptr_, p.dptr_, out.dptr_);
   }
 };
 
@@ -262,8 +264,8 @@ struct GeneralizedNegativeBinomialSampler {
                                    Stream<xpu> *s) {
     RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
     Kernel<SampleGeneralizedNegativeBinomialKernel<xpu>, xpu>
-      ::LaunchRndNative(s, gen, out.size(0), mu.size(0), out.size(0),
-                        mu.dptr_, alpha.dptr_, out.dptr_);
+      ::LaunchNativeRandomGenerator(s, gen, out.size(0), mu.size(0), out.size(0),
+                                    mu.dptr_, alpha.dptr_, out.dptr_);
   }
 };
 
