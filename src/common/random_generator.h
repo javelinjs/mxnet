@@ -157,6 +157,11 @@ public:
     return states_[idx];
   }
 
+  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
+                                            uint32_t idx) {
+    states_[idx] = state;
+  }
+
   MSHADOW_XINLINE __device__ int rand() {
     return curand(&states_[0]);
   }
@@ -167,11 +172,6 @@ public:
 
   MSHADOW_XINLINE __device__ float normal() {
     return curand_normal(&states_[0]);
-  }
-
-  MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
-                                            uint32_t idx) {
-    states_[idx] = state;
   }
 
 private:
@@ -210,10 +210,6 @@ public:
 
   MSHADOW_XINLINE __device__ double normal() {
     return curand_normal_double(&states_[0]);
-  }
-
-  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
-    return state_;
   }
 
 private:
