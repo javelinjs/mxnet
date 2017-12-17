@@ -106,9 +106,8 @@ public:
     return curand_normal(&state_);
   }
 
-  MSHADOW_XINLINE __device__ void copy_state_to(RandGeneratorGlobal<gpu, float> *g,
-                                                uint32_t idx) {
-    g->set_state(state_, idx);
+  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
+    return state_;
   }
 
 private:
@@ -134,9 +133,8 @@ public:
     return curand_normal_double(&state_);
   }
 
-  MSHADOW_XINLINE __device__ void copy_state_to(RandGeneratorGlobal<gpu, double> *g,
-                                                uint32_t idx) {
-    g->set_state(state_, idx);
+  MSHADOW_XINLINE __device__ curandStatePhilox4_32_10_t get_state() {
+    return state_;
   }
 
 private:
