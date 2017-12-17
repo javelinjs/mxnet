@@ -274,8 +274,8 @@ class ResourceManagerImpl : public ResourceManager {
     /*! \brief constructor */
     explicit ResourceSampler(Context ctx, size_t ncopy, uint32_t global_seed)
         : ctx(ctx), sampler(ncopy), resource(ncopy), curr_ptr(0) {
-      const unsigned int seed = ctx.dev_id + global_seed * kRandMagic;
       for (size_t i = 0; i < sampler.size(); ++i) {
+        const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
         resource[i].var = Engine::Get()->NewVariable();
         sampler[i] = common::random::NewRandGenerator<xpu>();
         common::random::RandGeneratorSeed(sampler[i], seed);
@@ -296,6 +296,7 @@ class ResourceManagerImpl : public ResourceManager {
     inline void Seed(uint32_t global_seed) {
       uint32_t seed = ctx.dev_id + global_seed * kRandMagic;
       for (size_t i = 0; i < sampler.size(); ++i) {
+        const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
         common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->PushAsync(
         [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {

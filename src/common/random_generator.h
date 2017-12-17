@@ -48,7 +48,7 @@ template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGeneratorHost;
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
-void RandGeneratorSeed(RandGenerator<xpu, DType> *, unsigned int seed);
+void RandGeneratorSeed(RandGenerator<xpu, DType> *, uint32_t seed);
 
 template<typename xpu, typename DType MSHADOW_DEFAULT_DTYPE>
 RandGenerator<xpu, DType> *NewRandGenerator();
@@ -64,13 +64,13 @@ public:
 
   explicit RandGenerator() {}
 
-  MSHADOW_XINLINE void Seed(unsigned int seed, unsigned int idx) { engine.seed(seed); }
+  MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) { engine.seed(seed); }
 
-  MSHADOW_XINLINE int rand(unsigned int i = 0) { return engine(); }
+  MSHADOW_XINLINE int rand(uint32_t i = 0) { return engine(); }
 
-  MSHADOW_XINLINE FType uniform(unsigned int i = 0) { return uniformNum(engine); }
+  MSHADOW_XINLINE FType uniform(uint32_t i = 0) { return uniformNum(engine); }
 
-  MSHADOW_XINLINE FType normal(unsigned int i = 0) { return normalNum(engine); }
+  MSHADOW_XINLINE FType normal(uint32_t i = 0) { return normalNum(engine); }
 
 private:
   std::mt19937 engine;
@@ -93,24 +93,24 @@ class RandGenerator<gpu, DType> {
 public:
   __device__ __host__ explicit RandGenerator() {}
 
-  MSHADOW_FORCE_INLINE __device__ void Seed(unsigned int seed, unsigned int state_idx) {
+  MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &(states_[state_idx]));
   }
 
-  MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
+  MSHADOW_FORCE_INLINE __device__ int rand(uint32_t i = 0) {
     return curand(&(states_[i % kGPURndStateNum]));
   }
 
-  MSHADOW_FORCE_INLINE __device__ float uniform(unsigned int i = 0) {
+  MSHADOW_FORCE_INLINE __device__ float uniform(uint32_t i = 0) {
     return static_cast<float>(1.0) - curand_uniform(&(states_[i % kGPURndStateNum]));
   }
 
-  MSHADOW_FORCE_INLINE __device__ float normal(unsigned int i = 0) {
+  MSHADOW_FORCE_INLINE __device__ float normal(uint32_t i = 0) {
     return curand_normal(&(states_[i % kGPURndStateNum]));
   }
 
 private:
-  curandState_t states_[kGPURndStateNum];
+  curandStatePhilox4_32_10_t states_[kGPURndStateNum];
 };
 
 template<>
@@ -118,24 +118,24 @@ class RandGenerator<gpu, double> {
 public:
   __device__ __host__ explicit RandGenerator() {}
 
-  MSHADOW_FORCE_INLINE __device__ void Seed(unsigned int seed, unsigned int state_idx) {
+  MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &(states_[state_idx]));
   }
 
-  MSHADOW_FORCE_INLINE __device__ int rand(unsigned int i = 0) {
+  MSHADOW_FORCE_INLINE __device__ int rand(uint32_t i = 0) {
     return curand(&(states_[i % kGPURndStateNum]));
   }
 
-  MSHADOW_FORCE_INLINE __device__ double uniform(unsigned int i = 0) {
+  MSHADOW_FORCE_INLINE __device__ double uniform(uint32_t i = 0) {
     return static_cast<double>(1.0) - curand_uniform_double(&(states_[i % kGPURndStateNum]));
   }
 
-  MSHADOW_FORCE_INLINE __device__ double normal(unsigned int i = 0) {
+  MSHADOW_FORCE_INLINE __device__ double normal(uint32_t i = 0) {
     return curand_normal_double(&(states_[i % kGPURndStateNum]));
   }
 
 private:
-  curandState_t states_[kGPURndStateNum];
+  curandStatePhilox4_32_10_t states_[kGPURndStateNum];
 };
 #endif  // MXNET_USE_CUDA
 

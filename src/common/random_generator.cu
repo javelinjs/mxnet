@@ -33,13 +33,13 @@ namespace common {
 namespace random {
 
 template<typename DType>
-__global__ void rand_generator_seed_kernel(RandGenerator<gpu, DType> *pgen, unsigned int seed) {
+__global__ void rand_generator_seed_kernel(RandGenerator<gpu, DType> *pgen, uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   pgen->Seed(seed, id);
 }
 
 template<>
-void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, unsigned int seed) {
+void RandGeneratorSeed<gpu, float>(RandGenerator<gpu, float> *gen, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, 0>>>(gen, seed);

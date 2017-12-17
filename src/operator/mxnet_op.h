@@ -449,8 +449,15 @@ struct Kernel<OP, cpu> {
 #endif
   }
 
+  /*!
+   * \brief Launch a generic CPU kernel with native random generator.
+   * \tparam rnd CPU random generator
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   */
   template<typename GType, typename ...Args>
-  inline static void LaunchRndNative(mshadow::Stream<cpu> *s,
+  inline static void LaunchRndNative(mshadow::Stream<cpu> *,
                                      common::random::RandGenerator<cpu, GType> *rnd,
                                      const int N, Args... args) {
 #ifdef _OPENMP
@@ -525,9 +532,9 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 }
 
 template<typename OP, typename GType, typename ...Args>
-__global__ void mxnet_generic_kernel_rnd_native(int nthread,
+__global__ void mxnet_generic_kernel_rnd_native(const int nthread,
                                                 common::random::RandGenerator<gpu, GType> *rnd,
-                                                int N, Args... args) {
+                                                const int N, Args... args) {
   using namespace mxnet::common::random;
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   for (int i = id * kGPUMinRndNumberPerThread;

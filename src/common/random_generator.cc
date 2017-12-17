@@ -30,7 +30,7 @@ namespace common {
 namespace random {
 
 template<>
-void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, unsigned int seed) {
+void RandGeneratorSeed<cpu, float>(RandGenerator<cpu, float> *gen, uint32_t seed) {
   gen->Seed(seed, 0);
 }
 
