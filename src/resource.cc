@@ -277,8 +277,14 @@ class ResourceManagerImpl : public ResourceManager {
       for (size_t i = 0; i < sampler.size(); ++i) {
         const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
         resource[i].var = Engine::Get()->NewVariable();
-        sampler[i] = common::random::NewRandGenerator<xpu>();
-        common::random::RandGeneratorSeed(sampler[i], seed);
+        common::random::RandGenerator<xpu> *r = common::random::NewRandGenerator<xpu>();
+        Engine::Get()->PushSync(
+        [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
+          common::random::RandGeneratorSeed(rctx.get_stream<xpu>(), r, seed);
+          on_complete();
+        }, ctx, {}, {resource[i].var},
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
+        sampler[i] = r;
         resource[i].ptr_ = sampler[i];
         resource[i].req = ResourceRequest(ResourceRequest::kSampler);
       }
@@ -303,7 +309,7 @@ class ResourceManagerImpl : public ResourceManager {
           common::random::RandGeneratorSeed(rctx.get_stream<xpu>(), r, seed);
           on_complete();
         }, ctx, {}, {resource[i].var},
-        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceSamplerSetSeed"));
+        FnProperty::kNormal, 0, PROFILER_MESSAGE("ResourceNativeRandomSetSeed"));
       }
     }
     // get next resource in round roubin matter

@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file random_generator.cu
- * \brief gpu util functions for random number generator.
+ * \brief gpu implements for random number generator.
  */
 
 #include <algorithm>
