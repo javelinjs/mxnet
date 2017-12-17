@@ -166,7 +166,7 @@ public:
   }
 
   MSHADOW_XINLINE __device__ float normal() {
-    return curand_norma(&states_[0]);
+    return curand_normal(&states_[0]);
   }
 
   MSHADOW_XINLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
