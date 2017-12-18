@@ -98,18 +98,18 @@ class ResourceManagerImpl : public ResourceManager {
         Context::CPU(), global_seed_));
     cpu_space_.reset(new ResourceTempSpace(
         Context::CPU(), cpu_temp_space_copy_));
-    cpu_sampler_.reset(new ResourceSampler<cpu>(
+    cpu_native_rand_.reset(new ResourceNativeRandom<cpu>(
         Context::CPU(), cpu_native_rand_copy_, global_seed_));
   }
   ~ResourceManagerImpl() {
     // need explicit delete, before engine get killed
     cpu_rand_.reset(nullptr);
     cpu_space_.reset(nullptr);
-    cpu_sampler_.reset(nullptr);
+    cpu_native_rand_.reset(nullptr);
 #if MXNET_USE_CUDA
     gpu_rand_.Clear();
     gpu_space_.Clear();
-    gpu_sampler_.Clear();
+    gpu_native_rand_.Clear();
 #endif
     if (engine_ref_ != nullptr) {
       engine_ref_ = nullptr;
@@ -125,7 +125,7 @@ class ResourceManagerImpl : public ResourceManager {
       switch (req.type) {
         case ResourceRequest::kRandom: return cpu_rand_->resource;
         case ResourceRequest::kTempSpace: return cpu_space_->GetNext();
-        case ResourceRequest::kNativeRandom: return cpu_sampler_->GetNext();
+        case ResourceRequest::kNativeRandom: return cpu_native_rand_->GetNext();
         default: LOG(FATAL) << "Unknown supported type " << req.type;
       }
     } else {
@@ -143,8 +143,8 @@ class ResourceManagerImpl : public ResourceManager {
             })->GetNext();
         }
         case ResourceRequest::kNativeRandom: {
-          return gpu_sampler_.Get(ctx.dev_id, [ctx, this]() {
-            return new ResourceSampler<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
+          return gpu_native_rand_.Get(ctx.dev_id, [ctx, this]() {
+            return new ResourceNativeRandom<gpu>(ctx, gpu_native_rand_copy_, global_seed_);
           })->GetNext();
         }
         default: LOG(FATAL) << "Unknown supported type " << req.type;
@@ -160,12 +160,12 @@ class ResourceManagerImpl : public ResourceManager {
   void SeedRandom(uint32_t seed) override {
     global_seed_ = seed;
     cpu_rand_->Seed(global_seed_);
-    cpu_sampler_->Seed(global_seed_);
+    cpu_native_rand_->Seed(global_seed_);
 #if MXNET_USE_CUDA
     gpu_rand_.ForEach([seed](size_t i, ResourceRandom<gpu> *p) {
         p->Seed(seed);
       });
-    gpu_sampler_.ForEach([seed](size_t i, ResourceSampler<gpu> *p) {
+    gpu_native_rand_.ForEach([seed](size_t i, ResourceNativeRandom<gpu> *p) {
       p->Seed(seed);
     });
 #endif
@@ -260,9 +260,9 @@ class ResourceManagerImpl : public ResourceManager {
     }
   };
 
-  // the random sampler resources
+  // the native random sampler resources
   template<typename xpu>
-  struct ResourceSampler {
+  struct ResourceNativeRandom {
     /*! \brief the context of the PRNG */
     Context ctx;
     /*! \brief pointes to sampler */
@@ -272,7 +272,7 @@ class ResourceManagerImpl : public ResourceManager {
     /*! \brief current pointer to the round roubin allocator */
     std::atomic<size_t> curr_ptr;
     /*! \brief constructor */
-    explicit ResourceSampler(Context ctx, size_t ncopy, uint32_t global_seed)
+    explicit ResourceNativeRandom(Context ctx, size_t ncopy, uint32_t global_seed)
         : ctx(ctx), sampler(ncopy), resource(ncopy), curr_ptr(0) {
       for (size_t i = 0; i < sampler.size(); ++i) {
         const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
@@ -288,7 +288,7 @@ class ResourceManagerImpl : public ResourceManager {
         resource[i].req = ResourceRequest(ResourceRequest::kNativeRandom);
       }
     }
-    ~ResourceSampler() {
+    ~ResourceNativeRandom() {
       for (size_t i = 0; i < sampler.size(); ++i) {
         common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->DeleteVariable(
@@ -343,15 +343,15 @@ class ResourceManagerImpl : public ResourceManager {
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
   std::unique_ptr<ResourceTempSpace> cpu_space_;
-  /*! \brief CPU random sampler resources */
-  std::unique_ptr<ResourceSampler<cpu> > cpu_sampler_;
+  /*! \brief CPU native random number resources */
+  std::unique_ptr<ResourceNativeRandom<cpu> > cpu_native_rand_;
 #if MXNET_USE_CUDA
   /*! \brief random number generator for GPU */
   common::LazyAllocArray<ResourceRandom<gpu> > gpu_rand_;
   /*! \brief temp space for GPU */
   common::LazyAllocArray<ResourceTempSpace> gpu_space_;
-  /*! \brief TODO */
-  common::LazyAllocArray<ResourceSampler<gpu> > gpu_sampler_;
+  /*! \brief GPU native (on device) random number resources */
+  common::LazyAllocArray<ResourceNativeRandom<gpu> > gpu_native_rand_;
 #endif
 };
 }  // namespace resource

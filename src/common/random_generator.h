@@ -60,22 +60,26 @@ template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
   typedef typename std::conditional<std::is_floating_point<DType>::value,
-  DType, float>::type FType;
+                                    DType, float>::type FType;
 
   explicit RandGenerator() {}
 
-  MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) { engine.seed(seed); }
+  MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) {
+    engine_.seed(seed);
+    uniformNum_.reset();
+    normalNum_.reset();
+  }
 
-  MSHADOW_XINLINE int rand() { return engine(); }
+  MSHADOW_XINLINE int rand() { return engine_(); }
 
-  MSHADOW_XINLINE FType uniform() { return uniformNum(engine); }
+  MSHADOW_XINLINE FType uniform() { return uniformNum_(engine_); }
 
-  MSHADOW_XINLINE FType normal() { return normalNum(engine); }
+  MSHADOW_XINLINE FType normal() { return normalNum_(engine_); }
 
 private:
-  std::mt19937 engine;
-  std::uniform_real_distribution<FType> uniformNum;
-  std::normal_distribution<FType> normalNum;
+  std::mt19937 engine_;
+  std::uniform_real_distribution<FType> uniformNum_;
+  std::normal_distribution<FType> normalNum_;
 };
 
 #if MXNET_USE_CUDA
