@@ -62,9 +62,7 @@ public:
   // Ensure that half_t is handled correctly.
   typedef typename std::conditional<std::is_floating_point<DType>::value,
                                     DType, double>::type FType;
-  typedef typename std::conditional<std::is_integral<DType>::value,
-                                    std::uniform_int_distribution<DType>,
-                                    std::uniform_real_distribution<FType>>::type GType;
+
   explicit RandGenerator() {}
 
   MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) {
@@ -75,7 +73,10 @@ public:
 
   MSHADOW_XINLINE int rand() { return engine_(); }
 
-  MSHADOW_XINLINE GType uniform() {
+  MSHADOW_XINLINE FType uniform() {
+    typedef typename std::conditional<std::is_integral<DType>::value,
+                                      std::uniform_int_distribution<DType>,
+                                      std::uniform_real_distribution<FType>>::type GType;
     GType dist_uniform;
     return dist_uniform(engine_);
   }
