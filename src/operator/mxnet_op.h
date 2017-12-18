@@ -460,23 +460,9 @@ struct Kernel<OP, cpu> {
   inline static void LaunchNativeRandomGenerator(mshadow::Stream<cpu> *,
                                                  common::random::RandGenerator<cpu, GType> *rnd,
                                                  const int N, Args... args) {
-#ifdef _OPENMP
-    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-    if (omp_threads < 2) {
-      for (int i = 0; i < N; ++i) {
-        OP::Map(i, rnd, args...);
-      }
-    } else {
-      #pragma omp parallel for num_threads(omp_threads)
-      for (int i = 0; i < N; ++i) {
-        OP::Map(i, rnd, args...);
-      }
-    }
-#else
     for (int i = 0; i < N; ++i) {
       OP::Map(i, rnd, args...);
     }
-#endif
   }
 
   /*!

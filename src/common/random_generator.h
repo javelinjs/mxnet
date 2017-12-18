@@ -59,9 +59,12 @@ void DeleteRandGenerator(RandGenerator<xpu, DType> *);
 template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
+  // Ensure that half_t is handled correctly.
   typedef typename std::conditional<std::is_floating_point<DType>::value,
-                                    DType, float>::type FType;
-
+                                    DType, double>::type FType;
+  typedef typename std::conditional<std::is_integral<DType>::value,
+                                    std::uniform_int_distribution<DType>,
+                                    std::uniform_real_distribution<FType>>::type GType;
   explicit RandGenerator() {}
 
   MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) {
@@ -72,9 +75,15 @@ public:
 
   MSHADOW_XINLINE int rand() { return engine_(); }
 
-  MSHADOW_XINLINE FType uniform() { return uniformNum_(engine_); }
+  MSHADOW_XINLINE GType uniform() {
+    GType dist_uniform;
+    return dist_uniform(engine_);
+  }
 
-  MSHADOW_XINLINE FType normal() { return normalNum_(engine_); }
+  MSHADOW_XINLINE FType normal() {
+    std::normal_distribution<FType> dist_normal;
+    return dist_normal(engine_);
+  }
 
 private:
   std::mt19937 engine_;
