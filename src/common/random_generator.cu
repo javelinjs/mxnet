@@ -61,7 +61,7 @@ RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
   RandGeneratorGlobal<gpu, float> *gen;
   CUDA_CALL(cudaMalloc(&gen, sizeof(RandGeneratorGlobal<gpu, float>)));
   return gen;
-};
+}
 
 template<>
 void DeleteRandGenerator<gpu, float>(RandGenerator<gpu, float> *p) {

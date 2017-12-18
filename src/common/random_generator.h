@@ -58,12 +58,9 @@ void DeleteRandGenerator(RandGenerator<xpu, DType> *);
 
 template<typename DType>
 class RandGenerator<cpu, DType> {
-public:
-  // Ensure that half_t is handled correctly.
+ public:
   typedef typename std::conditional<std::is_floating_point<DType>::value,
                                     DType, double>::type FType;
-
-  explicit RandGenerator() {}
 
   MSHADOW_XINLINE void Seed(uint32_t seed, uint32_t idx) {
     engine_.seed(seed);
@@ -86,7 +83,7 @@ public:
     return dist_normal(engine_);
   }
 
-private:
+ private:
   std::mt19937 engine_;
   std::uniform_real_distribution<FType> uniformNum_;
   std::normal_distribution<FType> normalNum_;
@@ -103,11 +100,9 @@ const int kGPURndStateNum = 32768;
 // one of the boundary cases.
 template<typename DType>
 class RandGenerator<gpu, DType> {
-public:
+ public:
   __device__ __host__ explicit RandGenerator(curandStatePhilox4_32_10_t state)
   : state_(state) {}
-
-  __device__ __host__ explicit RandGenerator() {}
 
   MSHADOW_FORCE_INLINE __device__ int rand() {
     return curand(&state_);
@@ -129,17 +124,15 @@ public:
     state_ = s;
   }
 
-private:
+ private:
   curandStatePhilox4_32_10_t state_;
 };
 
 template<>
 class RandGenerator<gpu, double> {
-public:
+ public:
   __device__ __host__ explicit RandGenerator(curandStatePhilox4_32_10_t state)
       : state_(state) {}
-
-  __device__ __host__ explicit RandGenerator() {}
 
   MSHADOW_FORCE_INLINE __device__ int rand() {
     return curand(&state_);
@@ -161,7 +154,7 @@ public:
     state_ = s;
   }
 
-private:
+ private:
   curandStatePhilox4_32_10_t state_;
 };
 
@@ -169,9 +162,7 @@ private:
 // always use mxnet_op::LaunchNativeRandomGenerator for launching a multi-threaded kernel.
 template<typename DType>
 class RandGeneratorGlobal<gpu, DType> : public RandGenerator<gpu, DType> {
-public:
-  __device__ __host__ explicit RandGeneratorGlobal() {}
-
+ public:
   MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
     if (state_idx == 0) RandGenerator<gpu, DType>::set_state(states_[0]);
@@ -186,7 +177,7 @@ public:
     states_[idx] = state;
   }
 
-private:
+ private:
   // sizeof(curandStatePhilox4_32_10_t) = 64
   // sizeof(curandState_t) = 48
   // while for a large amount of states,
@@ -196,9 +187,7 @@ private:
 
 template<>
 class RandGeneratorGlobal<gpu, double> : public RandGenerator<gpu, double> {
-public:
-  __device__ __host__ explicit RandGeneratorGlobal() {}
-
+ public:
   MSHADOW_FORCE_INLINE __device__ void Seed(uint32_t seed, uint32_t state_idx) {
     if (state_idx < kGPURndStateNum) curand_init(seed, state_idx, 0, &states_[state_idx]);
     if (state_idx == 0) RandGenerator<gpu, double>::set_state(states_[0]);
@@ -213,13 +202,13 @@ public:
     states_[idx] = state;
   }
 
-private:
+ private:
   curandStatePhilox4_32_10_t states_[kGPURndStateNum];
 };
 
 #endif  // MXNET_USE_CUDA
 
-}  // nanespace random
+}  // namespace random
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_RANDOM_GENERATOR_H_
