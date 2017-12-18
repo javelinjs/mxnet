@@ -30,7 +30,7 @@
 
 #ifdef __CUDACC__
 #include <curand_kernel.h>
-#endif  // MXNET_USE_CUDA
+#endif  // __CUDACC__
 
 using namespace mshadow;
 
@@ -203,7 +203,7 @@ class RandGeneratorGlobal<gpu, double> : public RandGenerator<gpu, double> {
   curandStatePhilox4_32_10_t states_[kGPURndStateNum];
 };
 
-#endif  // MXNET_USE_CUDA
+#endif  // __CUDACC__
 
 }  // namespace random
 }  // namespace common
