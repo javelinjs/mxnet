@@ -33,6 +33,7 @@
 #include <algorithm>
 #include "./operator_tune.h"
 #include "../engine/openmp.h"
+#include "../common/random_generator.h"
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -449,6 +450,22 @@ struct Kernel<OP, cpu> {
   }
 
   /*!
+   * \brief Launch a generic CPU kernel with native random generator.
+   * \tparam rnd CPU random generator
+   * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
+   * \param N Number of iterations
+   * \param args Varargs to eventually pass to the OP::Map() functoion
+   */
+  template<typename GType, typename ...Args>
+  inline static void LaunchNativeRandomGenerator(mshadow::Stream<cpu> *,
+                                                 common::random::RandGenerator<cpu, GType> *rnd,
+                                                 const int N, Args... args) {
+    for (int i = 0; i < N; ++i) {
+      OP::Map(i, rnd, args...);
+    }
+  }
+
+  /*!
    * \brief Launch a tunable OP with implicitly-supplied data type
    * \tparam DType Data type
    * \tparam T OP type
@@ -485,8 +502,6 @@ struct Kernel<OP, cpu> {
   }
 };
 
-
-
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
 __global__ void mxnet_generic_kernel(int N, Args... args) {
@@ -500,6 +515,25 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
   for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < N; i += blockDim.x * gridDim.x) {
     OP::Map(i, 1, args...);
   }
+}
+
+template<typename OP, typename GType, typename ...Args>
+__global__ void mxnet_generic_kernel_rnd_native(const int nthread,
+                                                common::random::RandGenerator<gpu, GType> *rnd,
+                                                const int N, Args... args) {
+  using namespace mxnet::common::random;
+  int id = blockIdx.x * blockDim.x + threadIdx.x;
+  RandGeneratorGlobal<gpu, GType> *grnd =
+      reinterpret_cast<RandGeneratorGlobal<gpu, GType> *>(rnd);
+  RandGenerator<gpu, GType> sampler(grnd->get_state(id));
+  for (int i = id * kGPUMinRndNumberPerThread;
+        i < N;
+        i += nthread * kGPUMinRndNumberPerThread) {
+    for (int j = 0; j < kGPUMinRndNumberPerThread && i + j < N; ++j) {
+      OP::Map(i + j, &sampler, args...);
+    }
+  }
+  grnd->set_state(sampler.get_state(), id);
 }
 
 template<typename OP>
@@ -521,6 +555,20 @@ struct Kernel<OP, gpu> {
     mxnet_generic_kernel_ex<OP, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
         N, args...);
+  }
+
+  template<typename GType, typename ...Args>
+  inline static void LaunchNativeRandomGenerator(mshadow::Stream<gpu> *s,
+                                                 common::random::RandGenerator<gpu, GType> *rnd,
+                                                 const int N, Args... args) {
+    using namespace mshadow::cuda;
+    const int nloop(1 + (N - 1) / common::random::kGPUMinRndNumberPerThread);
+    int ngrid = std::min(common::random::kGPURndStateNum / kBaseThreadNum,
+                          (nloop + kBaseThreadNum - 1) / kBaseThreadNum);
+    int nthread = ngrid * kBaseThreadNum;
+    mxnet_generic_kernel_rnd_native<OP, GType, Args...>
+      <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
+        nthread, rnd, N, args...);
   }
 };
 #endif  // __CUDACC__
