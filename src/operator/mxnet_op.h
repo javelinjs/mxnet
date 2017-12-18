@@ -460,6 +460,7 @@ struct Kernel<OP, cpu> {
   inline static void LaunchNativeRandomGenerator(mshadow::Stream<cpu> *,
                                                  common::random::RandGenerator<cpu, GType> *rnd,
                                                  const int N, Args... args) {
+    // do not use openmp since it does not guarantee the output order.
     for (int i = 0; i < N; ++i) {
       OP::Map(i, rnd, args...);
     }

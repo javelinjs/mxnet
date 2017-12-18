@@ -265,7 +265,7 @@ class ResourceManagerImpl : public ResourceManager {
   struct ResourceNativeRandom {
     /*! \brief the context of the PRNG */
     Context ctx;
-    /*! \brief pointes to sampler */
+    /*! \brief pointers to sampler */
     std::vector<common::random::RandGenerator<xpu> *> sampler;
     /*! \brief resource representation */
     std::vector<Resource> resource;
