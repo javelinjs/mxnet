@@ -195,7 +195,7 @@ class RandGeneratorGlobal<gpu, double> : public RandGenerator<gpu, double> {
   }
 
   MSHADOW_FORCE_INLINE __device__ void set_state(curandStatePhilox4_32_10_t state,
-                                            uint32_t idx) {
+                                                 uint32_t idx) {
     states_[idx] = state;
   }
 

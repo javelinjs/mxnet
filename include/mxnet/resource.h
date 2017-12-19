@@ -26,9 +26,9 @@
 #define MXNET_RESOURCE_H_
 
 #include <dmlc/logging.h>
-#include "../../src/common/random_generator.h"
 #include "./base.h"
 #include "./engine.h"
+#include "../../src/common/random_generator.h"
 
 namespace mxnet {
 
