@@ -100,8 +100,8 @@ public:
     for (int i = 0; i < kCPURndStateNum; ++i) (states_ + i)->seed(seed + i);
   }
 
-  MSHADOW_XINLINE void set_state(int idx, std::mt19937 *state) {
-    states_[idx] = *state;
+  MSHADOW_XINLINE void set_state(int idx, const std::mt19937 &state) {
+    states_[idx] = state;
   }
 
 private:
@@ -186,7 +186,8 @@ class RandGeneratorHost<gpu, DType> {
 
   void Seed(Stream<gpu> *s, uint32_t seed);
 
-  MSHADOW_FORCE_INLINE __device__ void set_state(int idx, curandStatePhilox4_32_10_t &state) {
+  MSHADOW_FORCE_INLINE __device__ void set_state(int idx,
+                                                 const curandStatePhilox4_32_10_t &state) {
     states_[idx] = state;
   }
 
