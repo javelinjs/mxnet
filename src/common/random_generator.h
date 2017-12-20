@@ -96,7 +96,7 @@ public:
 
   MSHADOW_XINLINE RandGeneratorImpl<cpu, DType> Get(int idx = 0) {
     std::mt19937 *ptr_engine = states_ + idx;
-    RandGenerator<cpu, DType> gen(ptr_engine);
+    RandGeneratorImpl<cpu, DType> gen(ptr_engine);
     return gen;
   }
 
@@ -185,7 +185,7 @@ class RandGenerator<gpu, DType> {
 
   MSHADOW_FORCE_INLINE __device__ RandGeneratorImpl<gpu, DType> Get(int idx = 0) {
     curandStatePhilox4_32_10_t *ptr_state = states_ + idx;
-    RandGenerator<gpu, DType> gen(ptr_state);
+    RandGeneratorImpl<gpu, DType> gen(ptr_state);
     return gen;
   }
 
