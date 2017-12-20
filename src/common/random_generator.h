@@ -83,19 +83,10 @@ class RandGeneratorImpl<cpu, DType> {
 template<typename DType>
 class RandGenerator<cpu, DType> {
 public:
-  RandGenerator() {
-    states_ = new std::mt19937[kCPURndStateNum];
-  }
-
-  MSHADOW_XINLINE void dispose() {
-    if (states_) {
-      delete[] states_;
-      states_ = nullptr;
-    }
-  }
+  MSHADOW_XINLINE void dispose() {}
 
   MSHADOW_XINLINE RandGeneratorImpl<cpu, DType> Get(int idx = 0) {
-    std::mt19937 *ptr_engine = states_ + idx;
+    std::mt19937 *ptr_engine = &states_[idx];
     RandGeneratorImpl<cpu, DType> gen(ptr_engine);
     return gen;
   }
@@ -109,7 +100,7 @@ public:
   }
 
 private:
-  std::mt19937 *states_;
+  std::mt19937 states_[kCPURndStateNum];
 };
 
 #if MXNET_USE_CUDA
@@ -120,7 +111,8 @@ const int kGPUMinRndNumberPerThread = 64;
 const int kGPURndStateNum = 32768;
 
 // uniform number generation in Cuda made consistent with stl (include 0 but exclude 1)
-// by using 1.0-curand_uniform(). Needed as some samplers below won't be able to deal with
+// by using 1.0-curand_uniform().
+// Needed as some samplers in sampler.h won't be able to deal with
 // one of the boundary cases.
 template<typename DType>
 class RandGeneratorImpl<gpu, DType> {
@@ -196,6 +188,9 @@ class RandGenerator<gpu, DType> {
     states_[idx] = state;
   }
 
+  // Free the allocated GPU memory.
+  // For global singleton,
+  // calling this in destructor may cause undefined behavior.
   MSHADOW_FORCE_INLINE __host__ void dispose() {
     if (states_) {
       CUDA_CALL(cudaFree(states_));

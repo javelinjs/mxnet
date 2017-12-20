@@ -548,8 +548,9 @@ __global__ void mxnet_generic_kernel_rnd_native(common::random::RandGenerator<gp
   using namespace mxnet::common::random;
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   RandGeneratorImpl<gpu, GType> sampler = rnd.Get(id);
-  const int end = id + length;
-  for (int i = id; i < end && i < N; i++) {
+  const int start = id * length;
+  const int end = start + length;
+  for (int i = start; i < end && i < N; i++) {
     OP::Map(i, &sampler, args...);
   }
   rnd.set_state(id, sampler.get_state());
