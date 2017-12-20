@@ -82,7 +82,7 @@ class RandGeneratorImpl<cpu, DType> {
 
 template<typename DType>
 class RandGenerator<cpu, DType> {
-public:
+ public:
   MSHADOW_XINLINE void dispose() {}
 
   MSHADOW_XINLINE RandGeneratorImpl<cpu, DType> Get(int idx = 0) {
@@ -99,7 +99,7 @@ public:
     states_[idx] = state;
   }
 
-private:
+ private:
   std::mt19937 states_[kCPURndStateNum];
 };
 

@@ -34,7 +34,7 @@ namespace random {
 __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_, uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   curand_init(seed, id, 0, states_ + id);
-};
+}
 
 template<>
 void RandGenerator<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
