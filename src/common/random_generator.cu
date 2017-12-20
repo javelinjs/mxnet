@@ -51,12 +51,12 @@ void RandGeneratorHost<gpu, DType>::Seed(Stream<gpu> *s, uint32_t seed) {
 
 
 template<typename DType>
-RandGenerator<gpu, DType> RandGeneratorHost<gpu, DType>::RandGeneratorHost<gpu, DType>() {
+RandGeneratorHost<gpu, DType>::RandGeneratorHost<gpu, DType>() {
   CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
 }
 
 template<typename DType>
-RandGenerator<gpu, DType> RandGeneratorHost<gpu, DType>::~RandGeneratorHost<gpu, DType>() {
+RandGeneratorHost<gpu, DType>::~RandGeneratorHost<gpu, DType>() {
   MSHADOW_CATCH_ERROR(CUDA_CALL(cudaFree(states_)));
 }
 
