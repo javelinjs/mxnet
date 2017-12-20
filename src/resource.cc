@@ -266,7 +266,7 @@ class ResourceManagerImpl : public ResourceManager {
     /*! \brief the context of the PRNG */
     Context ctx;
     /*! \brief pointers to sampler */
-    std::vector<common::random::RandGeneratorHost<xpu> *> sampler;
+    std::vector<common::random::RandGenerator<xpu> *> sampler;
     /*! \brief resource representation */
     std::vector<Resource> resource;
     /*! \brief current pointer to the round roubin allocator */
@@ -277,7 +277,7 @@ class ResourceManagerImpl : public ResourceManager {
       for (size_t i = 0; i < sampler.size(); ++i) {
         const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
         resource[i].var = Engine::Get()->NewVariable();
-        common::random::RandGeneratorHost<xpu> *r = new common::random::RandGeneratorHost<xpu>();
+        common::random::RandGenerator<xpu> *r = new common::random::RandGenerator<xpu>();
         Engine::Get()->PushSync(
         [r, seed](RunContext rctx) {
           r->Seed(rctx.get_stream<xpu>(), seed);
@@ -290,7 +290,7 @@ class ResourceManagerImpl : public ResourceManager {
     }
     ~ResourceNativeRandom() {
       for (size_t i = 0; i < sampler.size(); ++i) {
-        common::random::RandGeneratorHost<xpu> *r = sampler[i];
+        common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
           MSHADOW_CATCH_ERROR(r->dispose());
@@ -302,7 +302,7 @@ class ResourceManagerImpl : public ResourceManager {
     inline void Seed(uint32_t global_seed) {
       for (size_t i = 0; i < sampler.size(); ++i) {
         const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
-        common::random::RandGeneratorHost<xpu> *r = sampler[i];
+        common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->PushAsync(
         [r, seed](RunContext rctx, Engine::CallbackOnComplete on_complete) {
           r->Seed(rctx.get_stream<xpu>(), seed);

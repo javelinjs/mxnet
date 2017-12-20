@@ -26,7 +26,6 @@
 #include <algorithm>
 #include "./random_generator.h"
 #include "../operator/mxnet_op.h"
-#include "./cuda_utils.h"
 
 namespace mxnet {
 namespace common {
@@ -38,7 +37,7 @@ __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_, 
 };
 
 template<>
-void RandGeneratorHost<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
+void RandGenerator<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel
