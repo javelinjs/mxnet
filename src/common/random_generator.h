@@ -202,7 +202,7 @@ class RandGeneratorHost<gpu, DType> {
     states_[idx] = state;
   }
 
-  MSHADOW_XINLINE void dispose() {
+  MSHADOW_FORCE_INLINE __host__ void dispose() {
     if (states_) {
       CUDA_CALL(cudaFree(states_));
       states_ = 0;
