@@ -29,23 +29,6 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-template<>
-void RandGeneratorSeed<cpu, float>(Stream<cpu> *s,
-                                   RandGenerator<cpu, float> *gen,
-                                   uint32_t seed) {
-  gen->Seed(seed, 0);
-}
-
-template<>
-RandGenerator<cpu, float> *NewRandGenerator<cpu, float>() {
-  return new RandGenerator<cpu, float>();
-}
-
-template<>
-void DeleteRandGenerator<cpu, float>(RandGenerator<cpu, float> *p) {
-  if (p) delete p;
-}
-
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet

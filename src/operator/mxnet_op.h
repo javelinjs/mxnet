@@ -458,12 +458,28 @@ struct Kernel<OP, cpu> {
    */
   template<typename GType, typename ...Args>
   inline static void LaunchNativeRandomGenerator(mshadow::Stream<cpu> *,
-                                                 common::random::RandGenerator<cpu, GType> *rnd,
+                                                 common::random::RandGeneratorHost<cpu, GType> *rnd,
                                                  const int N, Args... args) {
+    using namespace mxnet::common::random;
     // do not use openmp since it does not guarantee the output order.
-    for (int i = 0; i < N; ++i) {
-      OP::Map(i, rnd, args...);
+      /*
+#ifdef _OPENMP
+    const int omp_threads = engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
+    if (omp_threads < 2) {
+      OP::Map(0, N, args...);
+    } else {
+      const int length = (N + omp_threads - 1) / omp_threads;
+      #pragma omp parallel for num_threads(omp_threads)
+      for (int i = 0; i < N; i += length) {
+        OP::Map(i, i + length > N ? N - i : length, args...);
+      }
     }
+#else */
+    for (int i = 0; i < N; ++i) {
+      RandGenerator<cpu, GType> sampler = rnd->Get();
+      OP::Map(i, &sampler, args...);
+    }
+// #endif
   }
 
   /*!
@@ -520,13 +536,11 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 
 template<typename OP, typename GType, typename ...Args>
 __global__ void mxnet_generic_kernel_rnd_native(const int nthread,
-                                                common::random::RandGenerator<gpu, GType> *rnd,
+                                                common::random::RandGeneratorHost<gpu, GType> rnd,
                                                 const int N, Args... args) {
   using namespace mxnet::common::random;
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  RandGeneratorGlobal<gpu, GType> *grnd =
-      reinterpret_cast<RandGeneratorGlobal<gpu, GType> *>(rnd);
-  RandGenerator<gpu, GType> sampler(grnd->get_state(id));
+  RandGenerator<gpu, GType> sampler = rnd.Get(id);
   for (int i = id * kGPUMinRndNumberPerThread;
         i < N;
         i += nthread * kGPUMinRndNumberPerThread) {
@@ -534,7 +548,7 @@ __global__ void mxnet_generic_kernel_rnd_native(const int nthread,
       OP::Map(i + j, &sampler, args...);
     }
   }
-  grnd->set_state(sampler.get_state(), id);
+  rnd.set_state(id, sampler.get_state());
 }
 
 template<typename OP>
@@ -560,16 +574,17 @@ struct Kernel<OP, gpu> {
 
   template<typename GType, typename ...Args>
   inline static void LaunchNativeRandomGenerator(mshadow::Stream<gpu> *s,
-                                                 common::random::RandGenerator<gpu, GType> *rnd,
+                                                 common::random::RandGeneratorHost<gpu, GType> *rnd,
                                                  const int N, Args... args) {
     using namespace mshadow::cuda;
+    using namespace mxnet::common::random;
     const int nloop(1 + (N - 1) / common::random::kGPUMinRndNumberPerThread);
     int ngrid = std::min(common::random::kGPURndStateNum / kBaseThreadNum,
                           (nloop + kBaseThreadNum - 1) / kBaseThreadNum);
     int nthread = ngrid * kBaseThreadNum;
     mxnet_generic_kernel_rnd_native<OP, GType, Args...>
       <<<ngrid, kBaseThreadNum, 0, mshadow::Stream<gpu>::GetStream(s)>>>(
-        nthread, rnd, N, args...);
+        nthread, *rnd, N, args...);
   }
 };
 #endif  // __CUDACC__

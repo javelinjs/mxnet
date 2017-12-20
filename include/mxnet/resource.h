@@ -100,9 +100,9 @@ struct Resource {
    * \return the native random number generator. for gpu, it is allocated on global memory.
    */
   template<typename xpu, typename DType>
-  inline common::random::RandGenerator<xpu, DType>* get_native_random() const {
+  inline common::random::RandGeneratorHost<xpu, DType>* get_native_random() const {
     CHECK_EQ(req.type, ResourceRequest::kNativeRandom);
-    return static_cast<common::random::RandGenerator<xpu, DType>*>(ptr_);
+    return static_cast<common::random::RandGeneratorHost<xpu, DType>*>(ptr_);
   }
 
   /*!

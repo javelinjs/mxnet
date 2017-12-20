@@ -33,39 +33,34 @@ namespace common {
 namespace random {
 
 template<typename DType>
-__global__ void rand_generator_seed_kernel(RandGeneratorGlobal<gpu, DType> *gen,
-                                           uint32_t seed) {
+static __global__ void RandGeneratorHost<gpu, DType>::rand_generator_seed_kernel(
+    curandStatePhilox4_32_10_t *states_,
+    uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  gen->Seed(seed, id);
-}
+  curand_init(seed, id, 0, states_ + id);
+};
 
 /*!
- * \brief Initialize states for RandGeneratorGlobal.
- * \tparam s gpu stream
- * \tparam gen pointer to RandGeneratorGlobal on device.
+ * \brief Initialize states.
  * \tparam seed seed for curand
  */
-template<>
-void RandGeneratorSeed<gpu, float>(Stream<gpu> *s,
-                                   RandGenerator<gpu, float> *gen,
-                                   uint32_t seed) {
+template<typename DType>
+void RandGeneratorHost<gpu, DType>::Seed(Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
-  rand_generator_seed_kernel<<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(
-      reinterpret_cast<RandGeneratorGlobal<gpu, float> *>(gen), seed);
+  RandGeneratorHost<gpu, DType>::rand_generator_seed_kernel
+      <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(states_, seed);
 }
 
-// allocate RandGeneratorGlobal on device
-template<>
-RandGenerator<gpu, float> *NewRandGenerator<gpu, float>() {
-  RandGeneratorGlobal<gpu, float> *gen;
-  CUDA_CALL(cudaMalloc(&gen, sizeof(RandGeneratorGlobal<gpu, float>)));
-  return gen;
+
+template<typename DType>
+RandGenerator<gpu, DType> RandGeneratorHost<gpu, DType>::RandGeneratorHost<gpu, DType>() {
+  CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
 }
 
-template<>
-void DeleteRandGenerator<gpu, float>(RandGenerator<gpu, float> *p) {
-  if (p) cudaFree(reinterpret_cast<RandGeneratorGlobal<gpu, float> *>(p));
+template<typename DType>
+RandGenerator<gpu, DType> RandGeneratorHost<gpu, DType>::~RandGeneratorHost<gpu, DType>() {
+  MSHADOW_CATCH_ERROR(CUDA_CALL(cudaFree(states_)));
 }
 
 }  // namespace random
