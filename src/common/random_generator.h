@@ -94,7 +94,7 @@ public:
   MSHADOW_XINLINE void dispose() {
     if (states_) {
       delete[] states_;
-      states_ = 0;
+      states_ = nullptr;
     }
   }
 
@@ -187,7 +187,7 @@ class RandGeneratorHost<gpu, DType> {
     CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
   }
 
-  ~RandGeneratorHost() { dispose(); }
+  // ~RandGeneratorHost() { dispose(); }
 
   MSHADOW_FORCE_INLINE __device__ RandGenerator<gpu, DType> Get(int idx = 0) {
     curandStatePhilox4_32_10_t *ptr_state = states_ + idx;
@@ -203,9 +203,10 @@ class RandGeneratorHost<gpu, DType> {
   }
 
   MSHADOW_FORCE_INLINE __host__ void dispose() {
+    fprintf(stderr, "free cuda states: %ld\n", states_);
     if (states_) {
       CUDA_CALL(cudaFree(states_));
-      states_ = 0;
+      states_ = nullptr;
     }
   }
 
