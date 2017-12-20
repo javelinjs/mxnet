@@ -478,7 +478,7 @@ struct Kernel<OP, cpu> {
         int id = omp_get_thread_num();
         RandGeneratorImpl<cpu, GType> sampler = rnd->Get(id);
         for (int j = i; j < std::min(i + length, N); ++j) {
-          OP::Map(j, &rnd, args...);
+          OP::Map(j, &sampler, args...);
         }
       }
     }
