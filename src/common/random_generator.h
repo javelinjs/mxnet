@@ -30,6 +30,7 @@
 
 #if MXNET_USE_CUDA
 #include <curand_kernel.h>
+#include "./cuda_utils.h"
 #endif  // MXNET_USE_CUDA
 
 using namespace mshadow;
@@ -87,7 +88,7 @@ public:
   }
 
   ~RandGeneratorHost() {
-    MSHADOW_CATCH_ERROR(delete[] states_);
+    delete[] states_;
   }
 
   MSHADOW_XINLINE RandGenerator<cpu, DType> Get(int idx = 0) {
@@ -175,8 +176,13 @@ class RandGenerator<gpu, double> {
 template<typename DType>
 class RandGeneratorHost<gpu, DType> {
  public:
-  RandGeneratorHost();
-  ~RandGeneratorHost();
+  RandGeneratorHost() {
+    CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
+  }
+
+  ~RandGeneratorHost() {
+    CUDA_CALL(cudaFree(states_));
+  }
 
   MSHADOW_FORCE_INLINE __device__ RandGenerator<gpu, DType> Get(int idx = 0) {
     curandStatePhilox4_32_10_t *ptr_state = states_ + idx;
