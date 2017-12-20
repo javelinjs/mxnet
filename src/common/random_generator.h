@@ -198,7 +198,6 @@ class RandGeneratorHost<gpu, DType> {
   // (which is not mentioned in Nvidia's documents).
   // Thus we use curandStatePhilox4_32_10_t here to reduce GPU memory usage.
   curandStatePhilox4_32_10_t *states_;
-  static __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *, uint32_t);
 };
 
 #endif  // MXNET_USE_CUDA

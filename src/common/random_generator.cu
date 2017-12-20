@@ -32,10 +32,7 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-template<typename DType>
-static __global__ void RandGeneratorHost<gpu, DType>::rand_generator_seed_kernel(
-    curandStatePhilox4_32_10_t *states_,
-    uint32_t seed) {
+__global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_, uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
   curand_init(seed, id, 0, states_ + id);
 };
@@ -48,7 +45,7 @@ template<typename DType>
 void RandGeneratorHost<gpu, DType>::Seed(Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
-  RandGeneratorHost<gpu, DType>::rand_generator_seed_kernel
+  rand_generator_seed_kernel
       <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(states_, seed);
 }
 
