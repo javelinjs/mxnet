@@ -96,7 +96,7 @@ public:
     return gen;
   }
 
-  MSHADOW_XINLINE void Seed(Stream<gpu> *, uint32_t seed) {
+  MSHADOW_XINLINE void Seed(Stream<cpu> *, uint32_t seed) {
     for (int i = 0; i < kCPURndStateNum; ++i) (states_ + i)->seed(seed + i);
   }
 
