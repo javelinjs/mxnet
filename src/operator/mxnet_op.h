@@ -466,7 +466,9 @@ struct Kernel<OP, cpu> {
         engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
     if (omp_threads < 2) {
       RandGeneratorImpl<cpu, GType> sampler = rnd->Get();
-      OP::Map(i, &sampler, args...);
+      for (int i = 0; i < N; ++i) {
+        OP::Map(i, &sampler, args...);
+      }
     } else {
       const int nloop = (N + kCPUMinRndNumberPerThread - 1) / kCPUMinRndNumberPerThread;
       const int nthread = std::min(nloop, omp_threads);
@@ -481,8 +483,8 @@ struct Kernel<OP, cpu> {
       }
     }
 #else
+    RandGeneratorImpl<cpu, GType> sampler = rnd->Get();
     for (int i = 0; i < N; ++i) {
-      RandGeneratorImpl<cpu, GType> sampler = rnd->Get();
       OP::Map(i, &sampler, args...);
     }
 #endif
