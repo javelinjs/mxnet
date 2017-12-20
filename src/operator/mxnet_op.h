@@ -458,14 +458,14 @@ struct Kernel<OP, cpu> {
    */
   template<typename GType, typename ...Args>
   inline static void LaunchRNG(mshadow::Stream<cpu> *,
-                               common::random::RandGeneratorHost<cpu, GType> *rnd,
+                               common::random::RandGenerator<cpu, GType> *rnd,
                                const int N, Args... args) {
     using namespace mxnet::common::random;
 #ifdef _OPENMP
     const int omp_threads = std::min(kCPURndStateNum,
         engine::OpenMP::Get()->GetRecommendedOMPThreadCount());
     if (omp_threads < 2) {
-      RandGenerator<cpu, GType> sampler = rnd->Get();
+      RandGeneratorImpl<cpu, GType> sampler = rnd->Get();
       OP::Map(i, &sampler, args...);
     } else {
       const int nloop = (N + kCPUMinRndNumberPerThread - 1) / kCPUMinRndNumberPerThread;
@@ -474,7 +474,7 @@ struct Kernel<OP, cpu> {
       #pragma omp parallel for num_threads(nthread)
       for (int i = 0; i < N; i += length) {
         int id = omp_get_thread_num();
-        RandGenerator<cpu, GType> sampler = rnd->Get(id);
+        RandGeneratorImpl<cpu, GType> sampler = rnd->Get(id);
         for (int j = i; j < std::min(i + length, N); ++j) {
           OP::Map(j, &rnd, args...);
         }
@@ -482,7 +482,7 @@ struct Kernel<OP, cpu> {
     }
 #else
     for (int i = 0; i < N; ++i) {
-      RandGenerator<cpu, GType> sampler = rnd->Get();
+      RandGeneratorImpl<cpu, GType> sampler = rnd->Get();
       OP::Map(i, &sampler, args...);
     }
 #endif
@@ -541,11 +541,11 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
 }
 
 template<typename OP, typename GType, typename ...Args>
-__global__ void mxnet_generic_kernel_rnd_native(common::random::RandGeneratorHost<gpu, GType> rnd,
+__global__ void mxnet_generic_kernel_rnd_native(common::random::RandGenerator<gpu, GType> rnd,
                                                 const int length, const int N, Args... args) {
   using namespace mxnet::common::random;
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  RandGenerator<gpu, GType> sampler = rnd.Get(id);
+  RandGeneratorImpl<gpu, GType> sampler = rnd.Get(id);
   const int end = id + length;
   for (int i = id; i < end && i < N; i++) {
     OP::Map(i, &rnd, args...);
@@ -576,7 +576,7 @@ struct Kernel<OP, gpu> {
 
   template<typename GType, typename ...Args>
   inline static void LaunchRNG(mshadow::Stream<gpu> *s,
-                               common::random::RandGeneratorHost<gpu, GType> *rnd,
+                               common::random::RandGenerator<gpu, GType> *rnd,
                                const int N, Args... args) {
     using namespace mshadow::cuda;
     using namespace mxnet::common::random;
