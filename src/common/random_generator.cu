@@ -41,22 +41,21 @@ __global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_, 
  * \brief Initialize states.
  * \tparam seed seed for curand
  */
-template<typename DType>
-void RandGeneratorHost<gpu, DType>::Seed(Stream<gpu> *s, uint32_t seed) {
+template<>
+void RandGeneratorHost<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
   rand_generator_seed_kernel
       <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(states_, seed);
 }
 
-
-template<typename DType>
-RandGeneratorHost<gpu, DType>::RandGeneratorHost<gpu, DType>() {
+template<>
+RandGeneratorHost<gpu, float>::RandGeneratorHost<gpu, DType>() {
   CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
 }
 
-template<typename DType>
-RandGeneratorHost<gpu, DType>::~RandGeneratorHost<gpu, DType>() {
+template<>
+RandGeneratorHost<gpu, float>::~RandGeneratorHost<gpu, DType>() {
   MSHADOW_CATCH_ERROR(CUDA_CALL(cudaFree(states_)));
 }
 
