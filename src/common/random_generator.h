@@ -87,10 +87,6 @@ public:
     states_ = new std::mt19937[kCPURndStateNum];
   }
 
-  ~RandGeneratorHost() {
-    dispose();
-  }
-
   MSHADOW_XINLINE void dispose() {
     if (states_) {
       delete[] states_;
@@ -187,8 +183,6 @@ class RandGeneratorHost<gpu, DType> {
     CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
   }
 
-  // ~RandGeneratorHost() { dispose(); }
-
   MSHADOW_FORCE_INLINE __device__ RandGenerator<gpu, DType> Get(int idx = 0) {
     curandStatePhilox4_32_10_t *ptr_state = states_ + idx;
     RandGenerator<gpu, DType> gen(ptr_state);
@@ -213,7 +207,7 @@ class RandGeneratorHost<gpu, DType> {
  private:
   // sizeof(curandStatePhilox4_32_10_t) = 64
   // sizeof(curandState_t) = 48
-  // while for a large amount of states, we notice
+  // while for a large amount of states, we observe
   // curand_init(curandState_t *) allocates extra memories on device,
   // (which is not mentioned in Nvidia's documents).
   // Thus we use curandStatePhilox4_32_10_t here to reduce GPU memory usage.
