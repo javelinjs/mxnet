@@ -179,7 +179,7 @@ class RandGeneratorHost<gpu, DType> {
   ~RandGeneratorHost();
 
   MSHADOW_FORCE_INLINE __device__ RandGenerator<gpu, DType> Get(int idx = 0) {
-    curandStatePhilox4_32_10_t *ptr_state = states + idx;
+    curandStatePhilox4_32_10_t *ptr_state = states_ + idx;
     RandGenerator<gpu, DType> gen(ptr_state);
     return gen;
   }
