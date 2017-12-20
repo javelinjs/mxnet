@@ -293,6 +293,7 @@ class ResourceManagerImpl : public ResourceManager {
         common::random::RandGeneratorHost<xpu> *r = sampler[i];
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
+          MSHADOW_CATCH_ERROR(r->dispose());
           MSHADOW_CATCH_ERROR(delete r);
         }, ctx, resource[i].var);
       }
