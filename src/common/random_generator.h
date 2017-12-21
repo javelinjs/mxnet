@@ -27,10 +27,12 @@
 
 #include <mxnet/base.h>
 #include <random>
+#include <new>
 
 #if MXNET_USE_CUDA
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include <curand_kernel.h>
-#include "./cuda_utils.h"
 #endif  // MXNET_USE_CUDA
 
 using namespace mshadow;
@@ -172,7 +174,10 @@ template<typename DType>
 class RandGenerator<gpu, DType> {
  public:
   RandGenerator() {
-    CUDA_CALL(cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t)));
+    cudaError_t e = cudaMalloc(&states_, kGPURndStateNum * sizeof(curandStatePhilox4_32_10_t));
+    if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
+      throw std::bad_alloc();
+    }
   }
 
   MSHADOW_FORCE_INLINE __device__ RandGeneratorImpl<gpu, DType> Get(int idx = 0) {
@@ -193,7 +198,10 @@ class RandGenerator<gpu, DType> {
   // calling this in destructor may cause undefined behavior.
   MSHADOW_FORCE_INLINE __host__ void dispose() {
     if (states_) {
-      CUDA_CALL(cudaFree(states_));
+      cudaError_t err = cudaFree(states_);
+      if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
+        LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
+      }
       states_ = nullptr;
     }
   }

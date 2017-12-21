@@ -553,6 +553,7 @@ __global__ void mxnet_generic_kernel_rnd_native(common::random::RandGenerator<gp
   for (int i = start; i < end && i < N; i++) {
     OP::Map(i, &sampler, args...);
   }
+  // store the state back to global memory.
   rnd.set_state(id, sampler.get_state());
 }
 
