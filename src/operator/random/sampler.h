@@ -237,7 +237,7 @@ struct SamplePoissonKernel {
                                   const IType *lambda, OType *out) {
     RNG_KERNEL_LOOP(xpu, float, id, gen, N, step, {
       index_t nBatch(1 + (nSample - 1) / nParm);
-      out[i] = OType(SamplePoisson(lambda[i / nBatch], &genImpl));
+      out[i] = OType(SamplePoisson<xpu>(lambda[i / nBatch], &genImpl));
     });
   }
 };
