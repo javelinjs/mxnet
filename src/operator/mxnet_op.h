@@ -501,21 +501,6 @@ __global__ void mxnet_generic_kernel_ex(int N, Args... args) {
   }
 }
 
-template<typename OP, typename GType, typename ...Args>
-__global__ void mxnet_generic_kernel_rnd_native(common::random::RandGenerator<gpu, GType> rnd,
-                                                const int length, const int N, Args... args) {
-  using namespace mxnet::common::random;
-  int id = blockIdx.x * blockDim.x + threadIdx.x;
-  RandGeneratorImpl<gpu, GType> sampler = rnd.Get(id);
-  const int start = id * length;
-  const int end = start + length;
-  for (int i = start; i < end && i < N; i++) {
-    OP::Map(i, &sampler, args...);
-  }
-  // store the state back to global memory.
-  rnd.set_state(id, sampler.get_state());
-}
-
 template<typename OP>
 struct Kernel<OP, gpu> {
   /*! \brief Launch GPU kernel */
