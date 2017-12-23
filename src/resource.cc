@@ -278,6 +278,7 @@ class ResourceManagerImpl : public ResourceManager {
         const uint32_t seed = ctx.dev_id + i * kMaxNumGPUs + global_seed * kRandMagic;
         resource[i].var = Engine::Get()->NewVariable();
         common::random::RandGenerator<xpu> *r = new common::random::RandGenerator<xpu>();
+        common::random::RandGenerator<xpu>::AllocState(r);
         Engine::Get()->PushSync(
         [r, seed](RunContext rctx) {
           r->Seed(rctx.get_stream<xpu>(), seed);
@@ -293,7 +294,7 @@ class ResourceManagerImpl : public ResourceManager {
         common::random::RandGenerator<xpu> *r = sampler[i];
         Engine::Get()->DeleteVariable(
         [r](RunContext rctx) {
-          MSHADOW_CATCH_ERROR(r->dispose());
+          MSHADOW_CATCH_ERROR(common::random::RandGenerator<xpu>::FreeState(r));
           MSHADOW_CATCH_ERROR(delete r);
         }, ctx, resource[i].var);
       }

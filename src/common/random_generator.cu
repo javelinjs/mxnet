@@ -31,17 +31,37 @@ namespace mxnet {
 namespace common {
 namespace random {
 
-__global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_, uint32_t seed) {
+__global__ void rand_generator_seed_kernel(curandStatePhilox4_32_10_t *states_,
+                                           const int size,
+                                           uint32_t seed) {
   int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curand_init(seed, id, 0, states_ + id);
+  if (id < size) curand_init(seed, id, 0, states_ + id);
 }
 
 template<>
 void RandGenerator<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
-  int ngrid = std::min(kMaxGridNum, (kGPURndStateNum + kBaseThreadNum - 1) / kBaseThreadNum);
+  int ngrid = std::min(kMaxGridNum,
+                       (RandGenerator<gpu, float>::kRndStateNum + kBaseThreadNum - 1) /
+                         kBaseThreadNum);
   rand_generator_seed_kernel
-      <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(states_, seed);
+      <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(
+          states_,
+          RandGenerator<gpu, float>::kRndStateNum,
+          seed);
+}
+
+template<>
+void RandGenerator<gpu, double>::Seed(Stream<gpu> *s, uint32_t seed) {
+  using namespace mshadow::cuda;
+  int ngrid = std::min(kMaxGridNum,
+                       (RandGenerator<gpu, double>::kRndStateNum + kBaseThreadNum - 1) /
+                         kBaseThreadNum);
+  rand_generator_seed_kernel
+      <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(
+          states_,
+          RandGenerator<gpu, double>::kRndStateNum,
+          seed);
 }
 
 }  // namespace random
