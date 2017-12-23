@@ -57,7 +57,7 @@ struct KernelRNG {
 #define RNG_KERNEL_LOOP(xpu, GType, thread_id, gen, N, step, ...)        \
   const int start = thread_id * step;                                    \
   const int end = start + step;                                          \
-  RandGenerator<xpu, GType>::Impl genImpl(gen, thread_id);               \
+  typename RandGenerator<xpu, GType>::Impl genImpl(gen, thread_id);               \
   for (int i = start; i < end && i < N; ++i) {                           \
     {__VA_ARGS__}                                                        \
   }
@@ -146,7 +146,7 @@ struct ExponentialSampler {
 };
 
 template<typename xpu, typename IType, typename OType>
-MSHADOW_XINLINE OType SampleGamma(IType a, IType b, RandGenerator<xpu, OType>::Impl *gen) {
+MSHADOW_XINLINE OType SampleGamma(IType a, IType b, typename RandGenerator<xpu, OType>::Impl *gen) {
   // Generate one sample of the gamma distribution
   OType sample;
   OType d = a < 1 ? a + 2.0 / 3.0 : a - 1.0 / 3.0;
@@ -198,7 +198,7 @@ struct GammaSampler {
 };
 
 template<typename xpu>
-MSHADOW_XINLINE int SamplePoisson(float lambda, RandGenerator<xpu, float>::Impl *gen) {
+MSHADOW_XINLINE int SamplePoisson(float lambda, typename RandGenerator<xpu, float>::Impl *gen) {
   // Generate one sample of the poisson distribution. Intentionally written
   // towards a specific type (float) for internal computation which is sufficient
   // for accurate enough computation.
