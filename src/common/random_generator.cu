@@ -51,19 +51,6 @@ void RandGenerator<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
           seed);
 }
 
-template<>
-void RandGenerator<gpu, double>::Seed(Stream<gpu> *s, uint32_t seed) {
-  using namespace mshadow::cuda;
-  int ngrid = std::min(kMaxGridNum,
-                       (RandGenerator<gpu, double>::kRndStateNum + kBaseThreadNum - 1) /
-                         kBaseThreadNum);
-  rand_generator_seed_kernel
-      <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(
-          states_,
-          RandGenerator<gpu, double>::kRndStateNum,
-          seed);
-}
-
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet
