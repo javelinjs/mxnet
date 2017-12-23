@@ -237,14 +237,6 @@ class RandGenerator<gpu, double> {
 
 #endif  // MXNET_USE_CUDA
 
-#define RNG_KERNEL_LOOP(xpu, GType, thread_id, gen, N, step, ...)        \
-  const int start = thread_id * step;                                    \
-  const int end = start + step;                                          \
-  RandGenerator<xpu, GType>::Impl genImpl(gen, thread_id);               \
-  for (int i = start; i < end && i < N; ++i) {                           \
-    {__VA_ARGS__}                                                        \
-  }
-
 }  // namespace random
 }  // namespace common
 }  // namespace mxnet

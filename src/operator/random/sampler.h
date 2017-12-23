@@ -50,9 +50,17 @@ struct KernelRNG {
     RandGenerator<xpu, GType>::kMinRndNumberPerThread;
     const int nthread = std::min(nloop, RandGenerator<xpu, GType>::kRndStateNum);
     const int step = (N + nthread - 1) / nthread;
-    Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args);
+    Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args...);
   }
 };
+
+#define RNG_KERNEL_LOOP(xpu, GType, thread_id, gen, N, step, ...)        \
+  const int start = thread_id * step;                                    \
+  const int end = start + step;                                          \
+  RandGenerator<xpu, GType>::Impl genImpl(gen, thread_id);               \
+  for (int i = start; i < end && i < N; ++i) {                           \
+    {__VA_ARGS__}                                                        \
+  }
 
 template<typename xpu>
 struct SampleUniformKernel {
