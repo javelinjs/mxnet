@@ -300,7 +300,7 @@ struct SampleGeneralizedNegativeBinomialKernel {
       index_t nBatch(1 + (nSample - 1) / nParm);
       float lambda = alpha[i / nBatch] == 0 ?
                      static_cast<float>(mu[i / nBatch]) :
-                     SampleGamma<xpu>(IType(1) / alpha[i / nBatch],
+                     SampleGamma<xpu, IType, float>(IType(1) / alpha[i / nBatch],
                                  alpha[i / nBatch] * mu[i / nBatch], &genImpl);
       out[i] = OType(SamplePoisson<xpu>(lambda, &genImpl));
     });
