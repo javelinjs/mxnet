@@ -57,7 +57,7 @@ struct KernelRNG {
 #define RNG_KERNEL_LOOP(xpu, GType, thread_id, gen, N, step, ...)        \
   const int start = thread_id * step;                                    \
   const int end = start + step;                                          \
-  typename RandGenerator<xpu, GType>::Impl genImpl(gen, thread_id);               \
+  typename RandGenerator<xpu, GType>::Impl genImpl(&gen, thread_id);               \
   for (int i = start; i < end && i < N; ++i) {                           \
     {__VA_ARGS__}                                                        \
   }
