@@ -175,7 +175,7 @@ struct SampleGammaKernel {
                                   const IType *alpha, const IType *beta, OType *out) {
     RNG_KERNEL_LOOP(xpu, FType, id, gen, N, step, {
       index_t nBatch(1 + (nSample - 1) / nParm);
-      out[i] = OType(SampleGamma(alpha[i / nBatch], beta[i / nBatch], &genImpl));
+      out[i] = OType(SampleGamma<xpu, IType, FType>(alpha[i / nBatch], beta[i / nBatch], &genImpl));
     });
   }
 };
@@ -268,8 +268,8 @@ struct SampleNegativeBinomialKernel {
       float alpha = k[i / nBatch];
       float prob = p[i / nBatch];
       float beta = (1.0 - prob) / prob;
-      float lambda = SampleGamma(alpha, beta, &genImpl);
-      out[i] = OType(SamplePoisson(lambda, &genImpl));
+      float lambda = SampleGamma<xpu, IType, float>(alpha, beta, &genImpl);
+      out[i] = OType(SamplePoisson<xpu>(lambda, &genImpl));
     });
   }
 };
@@ -302,7 +302,7 @@ struct SampleGeneralizedNegativeBinomialKernel {
                      static_cast<float>(mu[i / nBatch]) :
                      SampleGamma(IType(1) / alpha[i / nBatch],
                                  alpha[i / nBatch] * mu[i / nBatch], &genImpl);
-      out[i] = OType(SamplePoisson(lambda, &genImpl));
+      out[i] = OType(SamplePoisson<xpu>(lambda, &genImpl));
     });
   }
 };
