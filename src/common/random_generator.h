@@ -44,6 +44,9 @@ namespace random {
 template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
 class RandGenerator;
 
+template<typename Device, typename DType MSHADOW_DEFAULT_DTYPE>
+class RandGenerator<Device, DType>::Impl;
+
 template<typename DType>
 class RandGenerator<cpu, DType> {
  public:
