@@ -209,7 +209,7 @@ class RandGenerator<gpu, double> {
     }
 
    private:
-    RandGenerator<gpu, DType> *global_gen_;
+    RandGenerator<gpu, double> *global_gen_;
     int global_state_idx_;
     curandStatePhilox4_32_10_t state_;
   };
