@@ -25,6 +25,8 @@
 #ifndef MXNET_OPERATOR_RANDOM_SAMPLER_H_
 #define MXNET_OPERATOR_RANDOM_SAMPLER_H_
 
+#include <algorithm>
+
 using namespace mshadow;
 using namespace mxnet::op::mxnet_op;
 using namespace mxnet::common::random;
@@ -32,32 +34,27 @@ using namespace mxnet::common::random;
 namespace mxnet {
 namespace op {
 
-template<typename OP, typename xpu>
-struct KernelRNG {
 /*!
- * \brief Launch a generic CPU kernel with native random generator.
- * \tparam rnd CPU random generator
+ * \brief Launch a generic kernel with parallel random generator.
+ * \tparam gen random generator
+ * \tparam N Number of iterations
  * \tparam Args Varargs type to eventually pass to the OP::Map() functoion
- * \param N Number of iterations
- * \param args Varargs to eventually pass to the OP::Map() functoion
  */
-  template<typename GType, typename ...Args>
-  inline static void Launch(mshadow::Stream<xpu> *s,
-                            common::random::RandGenerator<xpu, GType> *gen,
-                            const int N, Args... args) {
-    const int nloop =
-    (N + RandGenerator<xpu, GType>::kMinRndNumberPerThread - 1) /
-    RandGenerator<xpu, GType>::kMinRndNumberPerThread;
-    const int nthread = std::min(nloop, RandGenerator<xpu, GType>::kRndStateNum);
-    const int step = (N + nthread - 1) / nthread;
-    Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args...);
-  }
-};
+template<typename OP, typename xpu, typename GType, typename ...Args>
+inline static void LaunchRNG(mshadow::Stream<xpu> *s,
+                             common::random::RandGenerator<xpu, GType> *gen,
+                             const int N, Args... args) {
+  const int nloop = (N + RandGenerator<xpu, GType>::kMinNumRandomPerThread - 1) /
+                    RandGenerator<xpu, GType>::kMinNumRandomPerThread;
+  const int nthread = std::min(nloop, RandGenerator<xpu, GType>::kNumRandomStates);
+  const int step = (N + nthread - 1) / nthread;
+  Kernel<OP, xpu>::Launch(s, nthread, *gen, N, step, args...);
+}
 
 #define RNG_KERNEL_LOOP(xpu, GType, thread_id, gen, N, step, ...)        \
   const int start = thread_id * step;                                    \
   const int end = start + step;                                          \
-  typename RandGenerator<xpu, GType>::Impl genImpl(&gen, thread_id);               \
+  typename RandGenerator<xpu, GType>::Impl genImpl(&gen, thread_id);     \
   for (int i = start; i < end && i < N; ++i) {                           \
     {__VA_ARGS__}                                                        \
   }
@@ -65,14 +62,14 @@ struct KernelRNG {
 template<typename xpu>
 struct SampleUniformKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *lower, const IType *upper, OType *out) {
     RNG_KERNEL_LOOP(xpu, OType, id, gen, N, step, {
       index_t nBatch(1 + (nSample - 1) / nParm);
-      out[i] =
-          OType(lower[i / nBatch] + (upper[i / nBatch] - lower[i / nBatch]) * genImpl.uniform());
+      out[i] = OType(lower[i / nBatch] +
+                     (upper[i / nBatch] - lower[i / nBatch]) * genImpl.uniform());
     });
   }
 };
@@ -85,16 +82,15 @@ struct UniformSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    KernelRNG<SampleUniformKernel<xpu>, xpu>::Launch(
-      s, pgen, out.size(0), lower.size(0), out.size(0),
-      lower.dptr_, upper.dptr_, out.dptr_);
+    LaunchRNG<SampleUniformKernel<xpu>, xpu>(s, pgen, out.size(0), lower.size(0), out.size(0),
+                                             lower.dptr_, upper.dptr_, out.dptr_);
   }
 };
 
 template<typename xpu>
 struct SampleNormalKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *mean, const IType *std, OType *out) {
@@ -113,7 +109,7 @@ struct NormalSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    KernelRNG<SampleNormalKernel<xpu>, xpu>::Launch(s, pgen, out.size(0), mean.size(0), out.size(0),
+    LaunchRNG<SampleNormalKernel<xpu>, xpu>(s, pgen, out.size(0), mean.size(0), out.size(0),
                                             mean.dptr_, std.dptr_, out.dptr_);
   }
 };
@@ -121,7 +117,7 @@ struct NormalSampler {
 template<typename xpu>
 struct SampleExponentialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, OType> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *lambda, OType *out) {
@@ -139,7 +135,7 @@ struct ExponentialSampler {
                                    const Tensor<xpu, 1, OType>& out,
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
-    KernelRNG<SampleExponentialKernel<xpu>, xpu>::Launch(s, pgen, out.size(0),
+    LaunchRNG<SampleExponentialKernel<xpu>, xpu>(s, pgen, out.size(0),
                                                  lambda.size(0), out.size(0),
                                                  lambda.dptr_, out.dptr_);
   }
@@ -169,13 +165,14 @@ MSHADOW_XINLINE OType SampleGamma(IType a, IType b, typename RandGenerator<xpu, 
 template<typename xpu>
 struct SampleGammaKernel {
   template<typename IType, typename OType, typename FType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, FType> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, FType> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *alpha, const IType *beta, OType *out) {
     RNG_KERNEL_LOOP(xpu, FType, id, gen, N, step, {
       index_t nBatch(1 + (nSample - 1) / nParm);
-      out[i] = OType(SampleGamma<xpu, IType, FType>(alpha[i / nBatch], beta[i / nBatch], &genImpl));
+      out[i] = OType(SampleGamma<xpu, IType, FType>(alpha[i / nBatch],
+                                                    beta[i / nBatch], &genImpl));
     });
   }
 };
@@ -191,9 +188,8 @@ struct GammaSampler {
     typedef typename std::conditional<std::is_floating_point<OType>::value,
                                       OType, float>::type FType;
     RandGenerator<xpu, FType> *gen = reinterpret_cast<RandGenerator<xpu, FType> *>(pgen);
-    KernelRNG<SampleGammaKernel<xpu>, xpu>
-      ::Launch(s, gen, out.size(0), alpha.size(0), out.size(0),
-                  alpha.dptr_, beta.dptr_, out.dptr_);
+    LaunchRNG<SampleGammaKernel<xpu>, xpu>(s, gen, out.size(0), alpha.size(0), out.size(0),
+                                           alpha.dptr_, beta.dptr_, out.dptr_);
   }
 };
 
@@ -231,7 +227,7 @@ MSHADOW_XINLINE int SamplePoisson(float lambda, typename RandGenerator<xpu, floa
 template<typename xpu>
 struct SamplePoissonKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, float> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, float> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *lambda, OType *out) {
@@ -250,16 +246,15 @@ struct PoissonSampler {
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
-    KernelRNG<SamplePoissonKernel<xpu>, xpu>
-      ::Launch(s, gen, out.size(0), lambda.size(0), out.size(0),
-                  lambda.dptr_, out.dptr_);
+    LaunchRNG<SamplePoissonKernel<xpu>, xpu>(s, gen, out.size(0), lambda.size(0), out.size(0),
+                                             lambda.dptr_, out.dptr_);
   }
 };
 
 template<typename xpu>
 struct SampleNegativeBinomialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, float> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, float> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *k, const IType *p, OType *out) {
@@ -283,16 +278,15 @@ struct NegativeBinomialSampler {
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
-    KernelRNG<SampleNegativeBinomialKernel<xpu>, xpu>
-      ::Launch(s, gen, out.size(0), k.size(0), out.size(0),
-                  k.dptr_, p.dptr_, out.dptr_);
+    LaunchRNG<SampleNegativeBinomialKernel<xpu>, xpu>(s, gen, out.size(0), k.size(0), out.size(0),
+                                                      k.dptr_, p.dptr_, out.dptr_);
   }
 };
 
 template<typename xpu>
 struct SampleGeneralizedNegativeBinomialKernel {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, float> &gen,
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, float> gen,
                                   const int N, const int step,
                                   index_t nParm, index_t nSample,
                                   const IType *mu, const IType *alpha, OType *out) {
@@ -301,7 +295,7 @@ struct SampleGeneralizedNegativeBinomialKernel {
       float lambda = alpha[i / nBatch] == 0 ?
                      static_cast<float>(mu[i / nBatch]) :
                      SampleGamma<xpu, IType, float>(IType(1) / alpha[i / nBatch],
-                                 alpha[i / nBatch] * mu[i / nBatch], &genImpl);
+                                                    alpha[i / nBatch] * mu[i / nBatch], &genImpl);
       out[i] = OType(SamplePoisson<xpu>(lambda, &genImpl));
     });
   }
@@ -316,9 +310,9 @@ struct GeneralizedNegativeBinomialSampler {
                                    RandGenerator<xpu, OType> *pgen,
                                    Stream<xpu> *s) {
     RandGenerator<xpu, float> *gen = reinterpret_cast<RandGenerator<xpu, float> *>(pgen);
-    KernelRNG<SampleGeneralizedNegativeBinomialKernel<xpu>, xpu>
-      ::Launch(s, gen, out.size(0), mu.size(0), out.size(0),
-                  mu.dptr_, alpha.dptr_, out.dptr_);
+    LaunchRNG<SampleGeneralizedNegativeBinomialKernel<xpu>, xpu>(s, gen, out.size(0),
+                                                                 mu.size(0), out.size(0),
+                                                                 mu.dptr_, alpha.dptr_, out.dptr_);
   }
 };
 

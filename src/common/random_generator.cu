@@ -20,7 +20,7 @@
 /*!
  * Copyright (c) 2017 by Contributors
  * \file random_generator.cu
- * \brief gpu implements for random number generator.
+ * \brief gpu implements for parallel random number generator.
  */
 
 #include <algorithm>
@@ -42,12 +42,12 @@ template<>
 void RandGenerator<gpu, float>::Seed(Stream<gpu> *s, uint32_t seed) {
   using namespace mshadow::cuda;
   int ngrid = std::min(kMaxGridNum,
-                       (RandGenerator<gpu, float>::kRndStateNum + kBaseThreadNum - 1) /
+                       (RandGenerator<gpu, float>::kNumRandomStates + kBaseThreadNum - 1) /
                          kBaseThreadNum);
   rand_generator_seed_kernel
       <<<ngrid, kBaseThreadNum, 0, Stream<gpu>::GetStream(s)>>>(
           states_,
-          RandGenerator<gpu, float>::kRndStateNum,
+          RandGenerator<gpu, float>::kNumRandomStates,
           seed);
 }
 

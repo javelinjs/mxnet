@@ -33,7 +33,6 @@
 #include <algorithm>
 #include "./operator_tune.h"
 #include "../engine/openmp.h"
-#include "../common/random_generator.h"
 
 #ifdef __CUDACC__
 #include "../common/cuda_utils.h"
@@ -485,6 +484,8 @@ struct Kernel<OP, cpu> {
     return true;
   }
 };
+
+
 
 #ifdef __CUDACC__
 template<typename OP, typename ...Args>
