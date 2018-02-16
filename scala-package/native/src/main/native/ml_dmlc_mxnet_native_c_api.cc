@@ -1910,6 +1910,7 @@ std::mutex mutex_op;
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   (JNIEnv *env, jobject obj, jstring jregName, jobject jopProp) {
+  LOG(FATAL) << "Register Custom Op";
   const char *regName = env->GetStringUTFChars(jregName, 0);
   std::string key(regName);
 
