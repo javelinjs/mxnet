@@ -2278,6 +2278,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           // forward callback
           auto forwardEntry = [](int size, void **ptrs, int *tags,
             const int *reqs, const int isTrain, void *state) {
+            fprintf(stderr, "ForwardEntry\n");
             std::string key(reinterpret_cast<char *>(state));
             int success = true;
             if (globalOpMap.find(key) == globalOpMap.end()) {
