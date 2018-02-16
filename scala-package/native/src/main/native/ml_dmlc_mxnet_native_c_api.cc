@@ -1958,7 +1958,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
     // list_arguments callback
     auto opPropListArgument = [](char ***args, void *state) {
-      fprint(stderr, "opPropListArgument\n");
+      fprintf(stderr, "opPropListArgument\n");
       int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
@@ -1993,7 +1993,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
     // list_outputs callback
     auto opPropListOutputs = [](char ***outputs, void *state) {
-      fprint(stderr, "opPropListArgument\n");
+      fprintf(stderr, "opPropListArgument\n");
       int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
@@ -2028,7 +2028,7 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
 
     // list_auxiliary_states callback
     auto opPropListAuxStates = [](char ***auxs, void *state) {
-      fprint(stderr, "opPropListAuxStates\n");
+      fprintf(stderr, "opPropListAuxStates\n");
       int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
