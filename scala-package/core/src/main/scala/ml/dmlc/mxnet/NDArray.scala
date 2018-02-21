@@ -545,6 +545,7 @@ object NDArray {
  * WARNING: it is your responsibility to clear this object through dispose().
  * </b>
  */
+// scalastyle:off finalize
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true) extends WarnIfNotDisposed {
   // record arrays who construct this array instance
@@ -558,6 +559,13 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     checkCall(_LIB.mxNDArraySaveRawBytes(handle, buf))
     buf.toArray
   }
+
+  /*
+  override protected def finalize(): Unit = {
+    dispose()
+    super.finalize()
+  }
+  */
 
   /**
    * Release the native memory. <br />

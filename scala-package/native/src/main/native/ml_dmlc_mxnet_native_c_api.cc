@@ -1908,10 +1908,9 @@ std::unordered_map<std::string, jobject> globalOpMap;
 std::mutex mutex_opprop;
 std::mutex mutex_op;
 
-/*
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
   (JNIEnv *env, jobject obj, jstring jregName, jobject jopProp) {
-  LOG(FATAL) << "Register Custom Op";
+  fprintf(stderr, "Register Custom Op\n");
   const char *regName = env->GetStringUTFChars(jregName, 0);
   std::string key(regName);
 
@@ -2280,8 +2279,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
           // forward callback
           auto forwardEntry = [](int size, void **ptrs, int *tags,
             const int *reqs, const int isTrain, void *state) {
-//            fprintf(stderr, "ForwardEntry\n");
-            LOG(FATAL) << "ForwardEntry";
             std::string key(reinterpret_cast<char *>(state));
             int success = true;
             if (globalOpMap.find(key) == globalOpMap.end()) {
@@ -2516,7 +2513,6 @@ JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxCustomOpRegister
       creatorLambda);
   return MXCustomOpRegister(regName, creator);
 }
-*/
 
 JNIEXPORT jint JNICALL Java_ml_dmlc_mxnet_LibInfo_mxSetProfilerConfig
   (JNIEnv *env, jobject obj, jint jmode, jstring jfilename) {

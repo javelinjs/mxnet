@@ -67,9 +67,6 @@ abstract class CustomOp {
    */
   private[mxnet] def forwardEntry(numNdarray: Int, ndarraies: Array[NDArrayHandle],
     tags: Array[Int], reqs: Array[Int], isTrain: Boolean): Boolean = {
-    // scalastyle:off println
-    // println("ForwardEntry in scala")
-    // scalastyle:on println
     var success = true
     try {
       val tensors = (0 until 5).toArray.map( x => ArrayBuffer[NDArray]() )
