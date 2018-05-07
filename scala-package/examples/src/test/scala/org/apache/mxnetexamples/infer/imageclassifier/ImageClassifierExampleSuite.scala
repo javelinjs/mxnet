@@ -39,13 +39,13 @@ class ImageClassifierExampleSuite extends FunSuite with BeforeAndAfterAll {
     logger.info("tempDirPath: %s".format(tempDirPath))
 
     Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models" +
-            "/resnet-18/resnet-18-symbol.json " + "-P " + tempDirPath + "/resnet18/ -q") !
+      "/resnet-18/resnet-18-symbol.json " + "-P " + tempDirPath + "/resnet18/ -q") !
 
     Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models"
-            + "/resnet-18/resnet-18-0000.params " + "-P " + tempDirPath + "/resnet18/ -q") !
+      + "/resnet-18/resnet-18-0000.params " + "-P " + tempDirPath + "/resnet18/ -q") !
 
     Process("wget https://s3.us-east-2.amazonaws.com/scala-infer-models" +
-            "/resnet-18/synset.txt -P " + tempDirPath + "/resnet18/ -q") !
+      "/resnet-18/synset.txt -P " + tempDirPath + "/resnet18/ -q") !
 
     Process("wget " +
       "https://s3.amazonaws.com/model-server/inputs/Pug-Cookie.jpg " +

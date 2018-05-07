@@ -91,9 +91,10 @@ def test_rsp_push_pull():
     check_rsp_push_pull('device')
     check_rsp_push_pull('device', is_push_cpu=False)
 
+
 def test_row_sparse_pull_single_device():
-    kvstore = mx.kv.create('local')
-    copy = mx.nd.random_normal(shape=(4,4), ctx=mx.cpu(0))
+    kvstore = mx.kv.create('device')
+    copy = mx.nd.random_normal(shape=(4,4), ctx=mx.gpu(0))
     grad = copy.tostype("row_sparse")
 
     key = 0
@@ -103,6 +104,7 @@ def test_row_sparse_pull_single_device():
     kvstore.row_sparse_pull(key, out=grad, row_ids=idx)
 
     assert_almost_equal(grad.asnumpy(), copy.asnumpy())
+
 
 def test_rsp_push_pull_large_rowid():
     num_rows = 793470

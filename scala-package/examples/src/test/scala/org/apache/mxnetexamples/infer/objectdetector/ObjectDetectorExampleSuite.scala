@@ -35,6 +35,7 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
     logger.info("tempDirPath: %s".format(tempDirPath))
 
     val modelBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
+    val synsetBase = "https://s3.amazonaws.com/model-server/models/resnet50_ssd/"
     val imageBase = "https://s3.amazonaws.com/model-server/inputs/"
 
     Process("wget " + modelBase + "resnet50_ssd_model-symbol.json " + "-P " +
@@ -45,7 +46,7 @@ class ObjectDetectorExampleSuite extends FunSuite with BeforeAndAfterAll {
       "-P " + tempDirPath + "/resnetssd/ -q") !
 
 
-    Process("wget  " + modelBase + "synset.txt " + "-P" +
+    Process("wget  " + synsetBase + "synset.txt " + "-P" +
       tempDirPath + "/resnetssd/ -q") !
 
     Process("wget " +

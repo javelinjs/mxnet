@@ -568,6 +568,7 @@ class CommDevice : public Comm {
                << "BroadcastRowSparse expects row_sparse dst NDArray";
       CHECK_EQ(row_id.ctx(), src.ctx())
               << "row_id and src are expected to be on the same context";
+
       // retain according to indices
       const bool is_same_ctx = out->ctx() == src.ctx();
       const bool is_diff_var = out->var() != src.var();
