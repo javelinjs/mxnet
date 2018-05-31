@@ -440,6 +440,11 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayFree
   return MXNDArrayFree(reinterpret_cast<NDArrayHandle>(ndArrayHandle));
 }
 
+JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayFreeAsync
+  (JNIEnv * env, jobject obj, jlong ndArrayHandle) {
+  return MXNDArrayFreeAsync(reinterpret_cast<NDArrayHandle>(ndArrayHandle));
+}
+
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayLoad
   (JNIEnv * env, jobject obj, jstring jfname, jobject joutSize,
     jobject jhandles, jobject joutNameSize, jobject jnames) {

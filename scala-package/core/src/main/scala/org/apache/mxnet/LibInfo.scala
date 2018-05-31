@@ -39,6 +39,7 @@ private[mxnet] class LibInfo {
                                  paramKeys: Array[String],
                                  paramVals: Array[String]): Int
   @native def mxNDArrayFree(handle: NDArrayHandle): Int
+  @native def mxNDArrayFreeAsync(handle: NDArrayHandle): Int
   @native def mxNDArrayCreateNone(out: NDArrayHandleRef): Int
   @native def mxNDArrayCreateEx(shape: Array[Int],
                                 ndim: Int,

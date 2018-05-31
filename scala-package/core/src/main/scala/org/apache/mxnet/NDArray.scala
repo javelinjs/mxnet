@@ -573,7 +573,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
    */
   def dispose(): Unit = {
     if (!disposed) {
-      _LIB.mxNDArrayFree(handle)
+      _LIB.mxNDArrayFreeAsync(handle)
       dependencies.clear()
       disposed = true
     }
