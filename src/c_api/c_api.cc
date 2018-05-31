@@ -372,13 +372,14 @@ int MXNDArrayFree(NDArrayHandle handle) {
 
 int MXNDArrayFreeAsync(NDArrayHandle handle) {
   API_BEGIN();
+  NDArray* arr = reinterpret_cast<NDArray*>(handle);
   std::vector<Engine::VarHandle> const_vars;
   std::vector<Engine::VarHandle> mutable_vars;
   Engine::Get()->PushAsync(
     [handle](RunContext ctx, Engine::CallbackOnComplete on_complete) {
       delete static_cast<NDArray*>(handle);
       on_complete();
-    }, ctx(), const_vars, mutable_vars,
+    }, arr->ctx(), const_vars, mutable_vars,
     FnProperty::kNormal, 0, "NDArrayFreeAsync");
   API_END();
 }
