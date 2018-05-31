@@ -609,6 +609,9 @@ MXNET_DLL int MXNDArrayWaitAll();
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNDArrayFree(NDArrayHandle handle);
+
+MXNET_DLL int MXNDArrayFreeAsync(NDArrayHandle handle);
+
 /*!
  * \brief Slice the NDArray along axis 0.
  * \param handle the handle to the NDArray
