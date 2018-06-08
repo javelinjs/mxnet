@@ -380,10 +380,14 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArrayGetShape
 
 JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxNDArraySyncCopyToCPU
   (JNIEnv *env, jobject obj, jlong ndArrayPtr, jbyteArray data, jint size) {
+//  int length = env->GetArrayLength(data);
   jbyte *pdata = env->GetByteArrayElements(data, NULL);
+//  jbyte *pdata = new jbyte[length];
   int ret = MXNDArraySyncCopyToCPU(reinterpret_cast<NDArrayHandle>(ndArrayPtr),
                                    reinterpret_cast<void *>(pdata), size);
   env->ReleaseByteArrayElements(data, pdata, 0);  // copy back to java array automatically
+//  env->SetByteArrayRegion(data, 0, length, pdata);
+//  delete[] pdata;
   return ret;
 }
 

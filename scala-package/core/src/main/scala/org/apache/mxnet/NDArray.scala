@@ -39,9 +39,10 @@ object NDArray {
 
   private def addDependency(froms: Array[NDArray], tos: Array[NDArray]): Unit = {
     froms.foreach { from =>
-      val weakRef = new WeakReference(from)
+//      val weakRef = new WeakReference(from)
       tos.foreach { to =>
-        to.dependencies.put(from.handle, weakRef)
+//        to.dependencies.put(from.handle, weakRef)
+        to.dependencies.put(from.handle, from)
         // we add all dep's dep to prevent (recursively) recomputing at runtime.
         to.dependencies ++= from.dependencies
       }
@@ -551,7 +552,8 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
                              val writable: Boolean = true) {
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
-  private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
+//  private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
+  private[mxnet] val dependencies = mutable.HashMap.empty[Long, NDArray]
   private var disposed = false
   def isDisposed: Boolean = disposed
 
@@ -606,7 +608,8 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
         if (excepts.contains(addr)) {
           true
         } else {
-          weak.get.foreach(_.dispose())
+//          weak.get.foreach(_.dispose())
+          weak.dispose()
           false
         }
       }
