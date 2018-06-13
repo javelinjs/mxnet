@@ -937,6 +937,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def internal: NDArrayInternal = {
+    waitToRead()
     val myType = dtype
     val arrLength = DType.numOfBytes(myType) * size
     val arr = Array.ofDim[Byte](arrLength)
