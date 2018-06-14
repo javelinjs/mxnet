@@ -557,7 +557,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   def isDisposed: Boolean = disposed
 
   override protected def finalize(): Unit = {
-    finalize()
+    dispose()
     super.finalize()
   }
 
