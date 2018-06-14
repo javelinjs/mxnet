@@ -552,13 +552,19 @@ object NDArray {
  * WARNING: it is your responsibility to clear this object through dispose().
  * </b>
  */
+// scalastyle:off finalize
 class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
-                             val writable: Boolean = true) extends WarnIfNotDisposed {
+                             val writable: Boolean = true) {
   // record arrays who construct this array instance
   // we use weak reference to prevent gc blocking
   private[mxnet] val dependencies = mutable.HashMap.empty[Long, WeakReference[NDArray]]
   private var disposed = false
   def isDisposed: Boolean = disposed
+
+  override protected def finalize(): Unit = {
+    dispose()
+    super.finalize()
+  }
 
   def serialize(): Array[Byte] = {
     val buf = ArrayBuffer.empty[Byte]
@@ -936,6 +942,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
   }
 
   def internal: NDArrayInternal = {
+    waitToRead()
     val myType = dtype
     val arrLength = DType.numOfBytes(myType) * size
     val arr = Array.ofDim[Byte](arrLength)
@@ -1022,6 +1029,7 @@ class NDArray private[mxnet](private[mxnet] val handle: NDArrayHandle,
     shape.hashCode + toArray.hashCode
   }
 }
+// scalastyle:on finalize
 
 private[mxnet] object NDArrayConversions {
   implicit def int2Scalar(x: Int): NDArrayConversions = new NDArrayConversions(x.toFloat)
