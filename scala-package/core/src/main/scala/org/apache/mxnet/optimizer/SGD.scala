@@ -17,7 +17,7 @@
 
 package org.apache.mxnet.optimizer
 
-import org.apache.mxnet.{Optimizer, LRScheduler, NDArray}
+import org.apache.mxnet.{LRScheduler, NDArray, NDArrayCollector, Optimizer}
 import org.apache.mxnet.NDArrayConversions._
 
 /**
@@ -39,7 +39,8 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
    * @param state NDArray or other objects returned by initState
    *              The auxiliary state used in optimization.
    */
-  override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef): Unit = {
+  override def update(index: Int, weight: NDArray, grad: NDArray, state: AnyRef)
+  : Unit = NDArrayCollector.auto().withScope {
     // TODO(bing) implement wd_bias, wd_gamma, wd_beta (copy from python package)
     var lr = {
       if (lrScheduler != null) {
@@ -58,7 +59,6 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
       // to get rid of memory leak
       val oldResdGrad = resdGrad
       resdGrad = NDArray.clip(resdGrad, -clipGradient, clipGradient)
-      oldResdGrad.dispose()
     }
 
     if (state != null) {
@@ -71,7 +71,6 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
       adder *= (-lr)
       mom += adder
       weight += mom
-      adder.dispose()
     } else {
       require(momentum == 0f)
       // adder = -lr * (resdGrad + this.wd * weight)
@@ -80,10 +79,7 @@ class SGD(val learningRate: Float = 0.01f, momentum: Float = 0.0f,
       adder += resdGrad
       adder *= (-lr)
       weight += adder
-      adder.dispose()
     }
-
-    resdGrad.dispose()
   }
 
   // Create additional optimizer state such as momentum.

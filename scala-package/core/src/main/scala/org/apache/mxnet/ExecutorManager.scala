@@ -234,7 +234,8 @@ private[mxnet] object ExecutorManager {
 
   // Load a list of arrays into a list of arrays specified by slices
   private[mxnet] def loadGeneralMulti(data: Seq[NDArray],
-                                      targets: Seq[Array[(Int, Int, NDArray)]]): Unit = {
+                                      targets: Seq[Array[(Int, Int, NDArray)]])
+  : Unit = NDArrayCollector.auto().withScope {
     for ((src, dTargets) <- data zip targets) {
       for ((start, end, dst) <- dTargets) {
         val sliced = src.slice(start, end)
@@ -522,7 +523,8 @@ private class DataParallelExecutorGroup private(sym: Symbol,
   }
 
   // Update evaluation metric with label and current outputs
-  def updateMetric(metric: EvalMetric, labels: IndexedSeq[NDArray]): Unit = {
+  def updateMetric(metric: EvalMetric, labels: IndexedSeq[NDArray])
+  : Unit = NDArrayCollector.auto().withScope {
     (trainExecs zip slices).foreach { case (texec, islice) =>
       val labelsSlice = labels.map(_.slice(islice))
       metric.update(labelsSlice, texec.outputs)

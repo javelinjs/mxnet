@@ -160,6 +160,13 @@ class FeedForward private(
       }
     }
 
+    if (_argParams != null) {
+      _argParams.values.foreach(_.dispose())
+    }
+    if (_auxParams != null) {
+      _auxParams.values.foreach(_.dispose())
+    }
+
     _argParams = argParams
     _auxParams = auxParams
     (argNames, paramNames, auxNames)
