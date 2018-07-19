@@ -45,7 +45,6 @@ private[mxnet] class MXDataIter(private[mxnet] val handle: DataIterHandle,
                _provideLabel: ListMap[String, Shape],
                _batchSize: Int) =
     if (hasNext) {
-      iterNext()
       val data = currentBatch.data(0)
       val label = currentBatch.label(0)
       // properties
